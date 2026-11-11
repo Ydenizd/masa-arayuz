@@ -56,7 +56,7 @@
   const SEVIYE_SIRA = ['kritik', 'yuksek', 'orta', 'dusuk', 'bilgi'];
   const BDURUM = { acik: 'Açık', kararda: 'Kararda', risk_kabulu: 'Risk kabulü', kapandi: 'Kapandı', gecersiz: 'Geçersiz' };
   const ACIK_BULGU = new Set(['acik', 'kararda', 'risk_kabulu']);
-  const TUR = { proje: 'PROJE', asama: 'AŞAMA', alan: 'İŞ ALANI', bilesen: 'BİLEŞEN', ip: 'İŞ PAKETİ', dosya: 'DOSYA' };
+  const TUR = { proje: 'PROJE', asama: 'AŞAMA', alan: 'İŞ ALANI', bilesen: 'BİLEŞEN', modul: 'MODÜL', ip: 'İŞ PAKETİ', dosya: 'DOSYA' };
 
   // ================================================================ kasa (G5)
   const KASA = 'masa.kasa.v1';
@@ -216,11 +216,11 @@
   // ================================================================ yerleşim
   // Akış yerleşimi: aşamalar soldan sağa sütun, iş alanları alttaki ayrı bant.
   // Sütun içinde bileşen → iş paketi → dosya girintili alt alta.
-  const OLCU = { proje: [400, 150], asama: [380, 122], alan: [380, 122], bilesen: [356, 110], ip: [330, 82], dosya: [306, 28] };
-  const GIRINTI = { bilesen: 24, ip: 26, dosya: 24 };
-  const ARA = { bilesen: 40, ip: 14, dosya: 6 };
+  const OLCU = { proje: [400, 150], asama: [380, 122], alan: [380, 122], bilesen: [356, 110], modul: [356, 110], ip: [330, 82], dosya: [306, 28] };
+  const GIRINTI = { bilesen: 24, modul: 24, ip: 26, dosya: 24 };
+  const ARA = { bilesen: 40, modul: 40, ip: 14, dosya: 6 };
   const KOLON = 380, KOLON_ARA = 150, BANT_ARA = 260, BAS_Y = 120;
-  const DERINLIK = { proje: 0, asama: 1, alan: 1, bilesen: 2, ip: 3, dosya: 4 };
+  const DERINLIK = { proje: 0, asama: 1, alan: 1, bilesen: 2, modul: 2, ip: 3, dosya: 4 };
   const ESIK = [0, 0, 0.3, 0.6, 1.05];
 
   // L: görünen en derin düzey (1–4). Daha derindeki düğümler yer kaplamaz; yakınlaştıkça sütunlar açılır.
@@ -393,6 +393,7 @@
     if (d.tur === 'asama') { ust += ` · ${d.id.slice(6)}`; g.classList.add(d.asama_durumu || 'bekliyor'); if (d.asama_durumu === 'aktif') ust += ' · AKTİF'; }
     if (d.tur === 'bilesen') ust += ` · ${d.id.slice(8)}`;
     if (d.tur === 'alan') ust += ` · ${d.id.slice(5)}`;
+    if (d.tur === 'modul') ust += ` · ${d.id.slice(6)}`;
     if (d.tur === 'ip') {
       ust += ` · ${d.id.slice(3)}`;
       if (kay) { g.classList.add(`d-${kay.durum}`); ust += ` · ${DURUM[kay.durum].toUpperCase()}`; } else { g.classList.add('d-kayitsiz'); ust += ' · KAYIT YOK'; }
@@ -401,9 +402,10 @@
     const adY = d.tur === 'proje' ? 58 : d.tur === 'asama' ? 54 : d.tur === 'ip' ? 40 : 48;
     const adN = d.tur === 'proje' ? 24 : d.tur === 'asama' ? 28 : d.tur === 'ip' ? 32 : 32;
     ekle(g, [s('text', { class: 'd-ust', x: 16, y: 22 }, kisalt(ust, Math.floor(w / 7))),
-      s('text', { class: 'd-ad', x: 16, y: adY }, kisalt(d.ad, adN))]);
-    if (d.tur === 'bilesen') {
-      const yer2 = d.repo ? `${d.repo.split('/')[1]}${d.klasor ? ' · ' + d.klasor : ''}` : 'kod deposu yok';
+      s('text', { class: 'd-ad', x: 16, y: adY }, kisalt(d.ad.replace(/\s*\([^)]*eklendi\)\s*$/, ''), adN))]);
+    if (d.tur === 'bilesen' || d.tur === 'modul') {
+      let yer2 = d.repo ? `${d.repo.split('/')[1]}${d.klasor ? ' · ' + d.klasor : ''}` : 'kod deposu yok';
+      if (d.tur === 'modul' && d.bilesen) yer2 = `${d.bilesen.slice(8)} modülü · ${yer2}`;
       g.appendChild(s('text', { class: 'd-alt d-yer', x: 16, y: 68 }, kisalt(yer2, 40)));
     }
 
@@ -697,7 +699,8 @@
         if (oz2.en_geri_evre !== null) panel.appendChild(satir('En geri evre', `${oz2.en_geri_evre} · ${EVRE[oz2.en_geri_evre]}`));
       }
       if (d.dayanak && d.dayanak.length) panel.appendChild(satir('Dayanak', d.dayanak.join(', ')));
-      if (d.tur === 'bilesen') panel.appendChild(satir('Yerleşim', d.repo ? `${d.repo}${d.klasor ? ' · ' + d.klasor : ''}` : 'Kod deposu yok (ilerleme karar deposunda)'));
+      if (d.tur === 'modul' && d.bilesen) panel.appendChild(satir('Bileşeni', d.bilesen.slice(8)));
+      if (d.tur === 'bilesen' || d.tur === 'modul') panel.appendChild(satir('Yerleşim', d.repo ? `${d.repo}${d.klasor ? ' · ' + d.klasor : ''}` : 'Kod deposu yok (ilerleme karar deposunda)'));
       if (d.tur === 'asama') panel.appendChild(satir('Aşama durumu', { aktif: 'Aktif', bekliyor: 'Bekliyor', tamamlandi: 'Tamamlandı' }[d.asama_durumu] || '—'));
       if (d.onay === 'onay_bekliyor') panel.appendChild(satir('Onay', 'Bekliyor'));
       if (d.kaynak) panel.appendChild(satir('Tanım', ghBag(d.kaynak) || '—'));
