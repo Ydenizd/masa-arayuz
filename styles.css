@@ -189,3 +189,4 @@ button, input { font-family: inherit; }
 .bant-ad { font: 600 30px var(--mono); letter-spacing: .14em; fill: var(--vurgu); opacity: .8; }
 .bant-ad.kucuk { font-size: 22px; }
 .bant-cizgi { fill: none; stroke: var(--cizgi); stroke-width: 2; stroke-dasharray: 18 10; opacity: .6; }
+.t-modul .cerceve2 { stroke-dasharray: 3 4; }
