@@ -56,7 +56,7 @@
   const SEVIYE_SIRA = ['kritik', 'yuksek', 'orta', 'dusuk', 'bilgi'];
   const BDURUM = { acik: 'Açık', kararda: 'Kararda', risk_kabulu: 'Risk kabulü', kapandi: 'Kapandı', gecersiz: 'Geçersiz' };
   const ACIK_BULGU = new Set(['acik', 'kararda', 'risk_kabulu']);
-  const TUR = { proje: 'PROJE', asama: 'AŞAMA', bilesen: 'BİLEŞEN', ip: 'İŞ PAKETİ', dosya: 'DOSYA' };
+  const TUR = { proje: 'PROJE', asama: 'AŞAMA', alan: 'İŞ ALANI', bilesen: 'BİLEŞEN', ip: 'İŞ PAKETİ', dosya: 'DOSYA' };
 
   // ================================================================ kasa (G5)
   const KASA = 'masa.kasa.v1';
@@ -214,13 +214,18 @@
   }
 
   // ================================================================ yerleşim
-  const OLCU = { proje: [400, 150], asama: [360, 122], bilesen: [320, 100], ip: [290, 82], dosya: [260, 28] };
-  const ARA = { asama: 80, bilesen: 30, ip: 16, dosya: 6 };
-  const SUTUN = [0, 500, 940, 1330, 1690];
-  const DERINLIK = { proje: 0, asama: 1, bilesen: 2, ip: 3, dosya: 4 };
+  // Akış yerleşimi: aşamalar soldan sağa sütun, iş alanları alttaki ayrı bant.
+  // Sütun içinde bileşen → iş paketi → dosya girintili alt alta.
+  const OLCU = { proje: [400, 150], asama: [380, 122], alan: [380, 122], bilesen: [356, 110], ip: [330, 82], dosya: [306, 28] };
+  const GIRINTI = { bilesen: 24, ip: 26, dosya: 24 };
+  const ARA = { bilesen: 40, ip: 14, dosya: 6 };
+  const KOLON = 380, KOLON_ARA = 150, BANT_ARA = 260, BAS_Y = 120;
+  const DERINLIK = { proje: 0, asama: 1, alan: 1, bilesen: 2, ip: 3, dosya: 4 };
   const ESIK = [0, 0, 0.3, 0.6, 1.05];
 
-  function yerlesim(m) {
+  // L: görünen en derin düzey (1–4). Daha derindeki düğümler yer kaplamaz; yakınlaştıkça sütunlar açılır.
+  const seviye = (k) => Math.max(1, ESIK.filter((e) => k >= e).length - 1);
+  function yerlesim(m, L) {
     const dug = new Map(m.dugumler.map((d) => [d.id, { ...d, cocuk: [] }]));
     for (const d of dug.values()) if (d.ust && dug.has(d.ust)) dug.get(d.ust).cocuk.push(d);
     for (const [ip, liste] of Object.entries(m.katmanlar.dosyalar || {})) {
@@ -236,23 +241,44 @@
     }
     const kok = [...dug.values()].find((d) => d.tur === 'proje');
     if (!kok) return null;
-    const olc = (d) => {
-      [d.w, d.h] = OLCU[d.tur];
-      if (!d.cocuk.length) return (d.sh = d.h);
-      const t = d.cocuk.reduce((a, c, i) => a + olc(c) + (i ? ARA[c.tur] : 0), 0);
-      return (d.sh = Math.max(d.h, t));
+    for (const d of dug.values()) [d.w, d.h] = OLCU[d.tur];
+    // sütun içi yığın: düğüm, altında girintili çocukları; dönen değer yığının alt sınırı
+    const gizle = (c, u) => { c.x = u.x; c.y = u.y; c.derinlik = DERINLIK[c.tur] ?? u.derinlik + 1; c.cocuk.forEach((x) => gizle(x, c)); };
+    const yig = (d, x, y, der) => {
+      d.x = x; d.y = y; d.derinlik = DERINLIK[d.tur] ?? der;
+      let alt = y + d.h;
+      for (const c of d.cocuk) {
+        if ((DERINLIK[c.tur] ?? d.derinlik + 1) > L) { gizle(c, d); continue; }
+        alt = yig(c, x + (GIRINTI[c.tur] || 24), alt + (ARA[c.tur] || 14), d.derinlik + 1);
+      }
+      return alt;
     };
-    const yerlestir = (d, ust, derinlik) => {
-      d.derinlik = DERINLIK[d.tur] ?? derinlik;
-      d.x = SUTUN[d.derinlik]; d.y = ust + d.sh / 2 - d.h / 2;
-      const t = d.cocuk.reduce((a, c, i) => a + c.sh + (i ? ARA[c.tur] : 0), 0);
-      let y = ust + (d.sh - t) / 2;
-      for (const c of d.cocuk) { yerlestir(c, y, derinlik + 1); y += c.sh + ARA[c.tur]; }
-    };
-    olc(kok); yerlestir(kok, 0, 0);
+    kok.derinlik = 0;
+    kok.x = 0; kok.y = BAS_Y - (OLCU.proje[1] - OLCU.asama[1]) / 2;
+    const asamalar = kok.cocuk.filter((c) => c.tur === 'asama');
+    const alanlar = kok.cocuk.filter((c) => c.tur === 'alan');
+    const ortak = kok.cocuk.filter((c) => c.tur !== 'asama' && c.tur !== 'alan');
+    const x0 = kok.w + KOLON_ARA;
+    const sx = (i) => x0 + i * (KOLON + KOLON_ARA);
+    let ust = 0;
+    asamalar.forEach((a, i) => { ust = Math.max(ust, yig(a, sx(i), BAS_Y, 1)); });
+    // ortak bileşenler (aşamaya bağlı olmayan) aşama dizisinin sonunda ayrı sütun
+    let oy = BAS_Y + OLCU.asama[1] + 40;
+    const ortakX = sx(asamalar.length);
+    for (const c of ortak) {
+      if ((DERINLIK[c.tur] ?? 2) > L) { gizle(c, kok); continue; }
+      ust = Math.max(ust, oy = yig(c, ortakX + GIRINTI.bilesen, oy, 2)); oy += ARA.bilesen;
+    }
+    const bantY = ust + BANT_ARA;
+    let alt = bantY;
+    alanlar.forEach((a, i) => { alt = Math.max(alt, yig(a, sx(i), bantY + BAS_Y, 1)); });
     const xs = [...dug.values()];
-    const kutu = { x: -80, y: -80, w: Math.max(...xs.map((d) => d.x + d.w)) + 160, h: kok.sh + 160 };
-    return { dug, kok, kutu };
+    const sag = Math.max(...xs.map((d) => d.x + d.w));
+    const bantlar = [{ ad: 'AŞAMALAR · akış soldan sağa', y: 0, x: x0 }];
+    if (ortak.length) bantlar.push({ ad: 'ORTAK', y: 0, x: ortakX, kucuk: true });
+    if (alanlar.length) bantlar.push({ ad: 'İŞ ALANLARI · aşamalara paralel sürer', y: bantY, x: x0, cizgi: true });
+    const kutu = { x: -80, y: -160, w: sag + 160, h: (alanlar.length ? alt : ust) + 240 };
+    return { dug, kok, kutu, bantlar, asamalar, alanlar, ortak, bantY, sag, L };
   }
 
   // düğüme bağlı bulgular ve uyarılar (alt düğümler dahil toplam)
@@ -277,34 +303,72 @@
     const m = p();
     panelKapat();
     if (!m) { yer = null; hudCiz(); miniCiz(); return; }
-    yer = yerlesim(m);
+    const v = gorunumler[m.proje.kimlik];
+    yer = yerlesim(m, v && !sigdir ? seviye(v.k) : 1);
     if (!yer) { $('#durum-satiri').textContent = 'Durum dosyasında proje düğümü yok.'; return; }
+    dunyaCiz(m);
+    hudCiz();
+    if (v && !sigdir) Object.assign(gorunum, v); else Object.assign(gorunum, baslangic());
+    uygula();
+  }
+
+  function dunyaCiz(m) {
+    const dunya = temizle($('#dunya'));
     yer.bag = bagla(m, yer);
     const ilerleme = m.katmanlar.ilerleme;
 
     const dallar = s('g'), devler = s('g'), kartlar = s('g');
     for (const d of yer.dug.values()) {
-      if (d.ust && yer.dug.has(d.ust)) {
+      // sütun içi bağ: üst kartın sol kenarından aşağı inen ray, çocuğa kısa yatay giriş
+      if (d.ust && yer.dug.has(d.ust) && d.ust !== yer.kok.id) {
         const u = yer.dug.get(d.ust);
-        const x1 = u.x + u.w, y1 = u.y + u.h / 2, x2 = d.x - 3, y2 = d.y + d.h / 2, mx = (x1 + x2) / 2;
+        const rx = u.x + 10, y1 = u.y + u.h, y2 = d.y + Math.min(d.h / 2, 30), x2 = d.x - 3;
         const surer = ilerleme.paketler[d.id] && ilerleme.paketler[d.id].durum === 'suruyor';
         dallar.appendChild(s('g', { class: d.derinlik >= 2 ? `k${d.derinlik}` : null },
-          s('path', { class: `dal${surer ? ' surer' : ''}${d.tur === 'dosya' ? ' d4' : ''}`, d: `M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`, 'marker-end': `url(#${surer ? 'ok-surer' : 'ok'})` })));
+          s('path', { class: `dal ray${surer ? ' surer' : ''}${d.tur === 'dosya' ? ' d4' : ''}`, d: `M${rx} ${y1} V${y2} H${x2}`, 'marker-end': `url(#${surer ? 'ok-surer' : 'ok'})` })));
       }
-      if (d.tur === 'asama') {
+      if (d.tur === 'asama' || d.tur === 'alan') {
         const o = ilerleme.ozet[d.id];
-        devler.appendChild(s('g', { class: 'dev' }, s('text', { x: d.x + d.w + 70, y: d.y + d.h / 2 + 24 },
-          kisalt(d.ad, 34), s('tspan', { class: 'dev-ek' }, o ? `  ${o.paket_sayisi} paket` : ''))));
+        devler.appendChild(s('g', { class: 'dev' }, s('text', { x: d.x, y: d.y - 34 },
+          kisalt(d.tur === 'asama' ? d.id.slice(6) : d.id.slice(5), 8), s('tspan', { class: 'dev-ek' }, o ? `  ${o.paket_sayisi} paket` : ''))));
       }
       kartlar.appendChild(kart(d, m));
     }
-    ekle(dunya, [dallar, devler, kartlar]);
+    const akis = s('g');
+    const zincir = [yer.kok, ...yer.asamalar];
+    for (let i = 1; i < zincir.length; i++) {
+      const a = zincir[i - 1], b = zincir[i], y = b.y + b.h / 2;
+      akis.appendChild(s('path', { class: 'akis-ok', d: `M${a.x + a.w} ${y} H${b.x - 4}`, 'marker-end': 'url(#ok)' }));
+    }
+    for (const b of yer.bantlar) {
+      if (b.cizgi) akis.appendChild(s('path', { class: 'bant-cizgi', d: `M-40 ${b.y - 120} H${yer.sag + 40}` }));
+      akis.appendChild(s('text', { class: `bant-ad${b.kucuk ? ' kucuk' : ''}`, x: b.x, y: b.y - 50 }, b.ad));
+    }
+    ekle(dunya, [akis, dallar, devler, kartlar]);
     katmanSiniflari();
-    hudCiz();
     miniCiz();
-    const v = gorunumler[m.proje.kimlik];
-    if (v && !sigdir) Object.assign(gorunum, v); else Object.assign(gorunum, baslangic());
-    uygula();
+    if (secili) { const g = document.querySelector(`.dugum[data-id="${CSS.escape(secili)}"]`); if (g) g.classList.add('secili'); }
+  }
+
+  // Düzey değişince yeniden yerleştir; çapa düğüm ekrandaki yerinde kalır.
+  function yenidenYerlestir(L, capaId, odakNokta) {
+    const m = p(); if (!m || !yer) return;
+    const k = gorunum.k, o = odakNokta || { x: W() / 2, y: H() / 2 };
+    let capa = capaId ? yer.dug.get(capaId) : null;
+    if (!capa) {
+      let en = Infinity;
+      for (const d of yer.dug.values()) {
+        if (d.derinlik > yer.L) continue;
+        const dx = (d.x + d.w / 2) * k + gorunum.x - o.x, dy = (d.y + d.h / 2) * k + gorunum.y - o.y, u = dx * dx + dy * dy;
+        if (u < en) { en = u; capa = d; }
+      }
+    }
+    const once = capa ? { x: capa.x, y: capa.y } : null, id = capa && capa.id;
+    yer = yerlesim(m, L);
+    if (!yer) return;
+    dunyaCiz(m);
+    const sonra = id && yer.dug.get(id);
+    if (once && sonra) { gorunum.x += (once.x - sonra.x) * k; gorunum.y += (once.y - sonra.y) * k; }
   }
 
   function kart(d, m) {
@@ -328,6 +392,7 @@
     if (d.tur === 'proje') ust += ` · ${m.proje.kimlik}`;
     if (d.tur === 'asama') { ust += ` · ${d.id.slice(6)}`; g.classList.add(d.asama_durumu || 'bekliyor'); if (d.asama_durumu === 'aktif') ust += ' · AKTİF'; }
     if (d.tur === 'bilesen') ust += ` · ${d.id.slice(8)}`;
+    if (d.tur === 'alan') ust += ` · ${d.id.slice(5)}`;
     if (d.tur === 'ip') {
       ust += ` · ${d.id.slice(3)}`;
       if (kay) { g.classList.add(`d-${kay.durum}`); ust += ` · ${DURUM[kay.durum].toUpperCase()}`; } else { g.classList.add('d-kayitsiz'); ust += ' · KAYIT YOK'; }
@@ -337,6 +402,10 @@
     const adN = d.tur === 'proje' ? 24 : d.tur === 'asama' ? 28 : d.tur === 'ip' ? 32 : 32;
     ekle(g, [s('text', { class: 'd-ust', x: 16, y: 22 }, kisalt(ust, Math.floor(w / 7))),
       s('text', { class: 'd-ad', x: 16, y: adY }, kisalt(d.ad, adN))]);
+    if (d.tur === 'bilesen') {
+      const yer2 = d.repo ? `${d.repo.split('/')[1]}${d.klasor ? ' · ' + d.klasor : ''}` : 'kod deposu yok';
+      g.appendChild(s('text', { class: 'd-alt d-yer', x: 16, y: 68 }, kisalt(yer2, 40)));
+    }
 
     if (d.tur === 'ip') {
       const dg = s('g', { class: 'dilimler' });
@@ -361,8 +430,8 @@
       g.appendChild(s('g', { class: 'rozet', transform: `translate(${w - 34},${hh})` },
         s('circle', { class: `s-${en}`, r: 12 }), s('text', { y: 4 }, String(bul.size))));
     }
-    const uy = yer.bag.uyari.get(d.id);
-    if (uy && uy.length) {
+    const uy = (yer.bag.uyari.get(d.id) || []).filter((u) => u.kod !== 'ilerleme_kaydi_yok');
+    if (uy.length) {
       g.appendChild(s('g', { class: 'ucgen-g', transform: `translate(${w - 64},${hh})` },
         s('path', { class: 'ucgen', d: 'M0 -12 L11 8 L-11 8 Z' }), s('text', { class: 'ucgen-t', y: 6 }, '!')));
     }
@@ -411,7 +480,7 @@
 
     const der = temizle($('#derinlik'));
     der.appendChild(h('div', { class: 'kutu-baslik' }, 'DERİNLİK'));
-    ['Proje', 'Aşama', 'Bileşen', 'İş paketi', 'Dosya'].forEach((ad, i) => {
+    ['Proje', 'Aşama · iş alanı', 'Bileşen', 'İş paketi', 'Dosya'].forEach((ad, i) => {
       const b = h('button', { class: 'satir-dugme', type: 'button', 'data-l': i }, h('i'), ad);
       b.addEventListener('click', () => duzeyeGit(i));
       der.appendChild(b);
@@ -438,7 +507,12 @@
   const W = () => tuval.clientWidth, H = () => tuval.clientHeight;
   let anim = null;
 
+  let animde = false, odak = null;
   function uygula() {
+    if (yer && !animde && seviye(gorunum.k) !== yer.L) yenidenYerlestir(seviye(gorunum.k), null, odak);
+    uygulaDonusum();
+  }
+  function uygulaDonusum() {
     const { x, y, k } = gorunum;
     dunya.setAttribute('transform', `translate(${x},${y}) scale(${k})`);
     tuval.style.setProperty('--kucuk', `${20 * k}px`);
@@ -455,14 +529,16 @@
   }
   function zoomNokta(px, py, f) {
     const k2 = sinir(gorunum.k * f, KMIN, KMAX), r = k2 / gorunum.k;
-    gorunum.x = px - (px - gorunum.x) * r; gorunum.y = py - (py - gorunum.y) * r; gorunum.k = k2; uygula();
+    gorunum.x = px - (px - gorunum.x) * r; gorunum.y = py - (py - gorunum.y) * r; gorunum.k = k2;
+    odak = { x: px, y: py }; uygula(); odak = null;
   }
   function git(h2, sure = 420) {
-    cancelAnimationFrame(anim);
+    cancelAnimationFrame(anim); animde = false;
+    animde = true;
     const b = { ...gorunum }, t0 = performance.now();
     const ad = (n) => { const u = Math.min(1, (n - t0) / sure), e = 1 - (1 - u) ** 3;
       gorunum.x = b.x + (h2.x - b.x) * e; gorunum.y = b.y + (h2.y - b.y) * e; gorunum.k = b.k + (h2.k - b.k) * e; uygula();
-      if (u < 1) anim = requestAnimationFrame(ad); };
+      if (u < 1) anim = requestAnimationFrame(ad); else { animde = false; uygula(); } };
     anim = requestAnimationFrame(ad);
   }
   function sigdir(r, pay = 60, kmax = KMAX) {
@@ -472,9 +548,10 @@
   }
   function baslangic() {
     if (!yer) return { x: 0, y: 0, k: 1 };
-    const g = [...yer.dug.values()].filter((d) => d.derinlik <= 2);
+    const g = [...yer.dug.values()].filter((d) => d.derinlik <= 1);
     const y0 = Math.min(...g.map((d) => d.y)), y1 = Math.max(...g.map((d) => d.y + d.h));
-    return sigdir({ x: -40, y: y0 - 40, w: SUTUN[2] + OLCU.bilesen[0] + 80, h: y1 - y0 + 80 }, 60, 1);
+    // açılış: iki bant birlikte, bileşen düzeyinin hemen altında (yerleşim sıkı kalsın)
+    return sigdir({ x: -40, y: y0 - 190, w: yer.sag + 80, h: y1 - y0 + 230 }, 40, ESIK[2] * 0.97);
   }
   function duzeyeGit(l) {
     const k = Math.max(ESIK[l] * 1.15, 0.2), cx = W() / 2, cy = H() / 2, r = k / gorunum.k;
@@ -484,7 +561,7 @@
   const dunyaya = (px, py) => ({ x: (px - gorunum.x) / gorunum.k, y: (py - gorunum.y) / gorunum.k });
 
   tuval.addEventListener('wheel', (e) => {
-    e.preventDefault(); cancelAnimationFrame(anim);
+    e.preventDefault(); cancelAnimationFrame(anim); animde = false;
     if (e.shiftKey) { gorunum.x -= e.deltaY; uygula(); return; }
     const q = yerel(e); zoomNokta(q.x, q.y, Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0018)));
   }, { passive: false });
@@ -492,7 +569,7 @@
   const isaret = new Map(); let surukle = null, sikistir = null, hareket = 0;
   tuval.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    cancelAnimationFrame(anim); tuval.setPointerCapture(e.pointerId); isaret.set(e.pointerId, yerel(e));
+    cancelAnimationFrame(anim); animde = false; tuval.setPointerCapture(e.pointerId); isaret.set(e.pointerId, yerel(e));
     if (isaret.size === 1) { surukle = { ...yerel(e), gx: gorunum.x, gy: gorunum.y }; hareket = 0; tuval.classList.add('surukle'); }
     if (isaret.size === 2) { const [a, b] = [...isaret.values()]; sikistir = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, g: { ...gorunum } }; surukle = null; hareket = 99; }
   });
@@ -526,7 +603,9 @@
     const altta = document.elementFromPoint(e.clientX, e.clientY);
     const g = altta && altta.closest('.dugum');
     if (g && yer) {
-      const d = yer.dug.get(g.getAttribute('data-id')); if (!d) return;
+      let d = yer.dug.get(g.getAttribute('data-id')); if (!d) return;
+      const hedefL = Math.min(d.derinlik + 1, 4);
+      if (hedefL > yer.L) { yenidenYerlestir(hedefL, d.id); d = yer.dug.get(d.id); uygulaDonusum(); }
       const alt = []; (function dolas(x) { alt.push(x); x.cocuk.forEach(dolas); })(d);
       const sinirDer = Math.min(d.derinlik + 1, 4), gor = alt.filter((x) => x.derinlik <= sinirDer);
       const x0 = Math.min(...gor.map((x) => x.x)), x1 = Math.max(...gor.map((x) => x.x + x.w));
@@ -544,12 +623,13 @@
   $('#z-art').addEventListener('click', () => merkezZoom(1.4));
   $('#z-azal').addEventListener('click', () => merkezZoom(1 / 1.4));
   $('#z-oran').addEventListener('click', () => merkezZoom(1 / gorunum.k));
-  $('#z-sigdir').addEventListener('click', () => yer && git(sigdir(yer.kutu)));
+  const genel = () => { if (!yer) return; animde = true; if (yer.L !== 1) { yenidenYerlestir(1); uygulaDonusum(); } git(baslangic()); };
+  $('#z-sigdir').addEventListener('click', genel);
   addEventListener('keydown', (e) => {
     if ($('#masa').hidden || e.target.closest('input')) return;
     if (e.key === '+' || e.key === '=') merkezZoom(1.3);
     else if (e.key === '-') merkezZoom(1 / 1.3);
-    else if (e.key === '0' && yer) git(sigdir(yer.kutu));
+    else if (e.key === '0') genel();
     else if (e.key === 'Escape') panelKapat();
   });
   addEventListener('resize', miniGorus);
@@ -578,7 +658,7 @@
   }
   let miniSurukle = false;
   const miniGit = (e) => { const q = mini.createSVGPoint(); q.x = e.clientX; q.y = e.clientY; const w = q.matrixTransform(mini.getScreenCTM().inverse()); gorunum.x = W() / 2 - w.x * gorunum.k; gorunum.y = H() / 2 - w.y * gorunum.k; uygula(); };
-  mini.addEventListener('pointerdown', (e) => { e.stopPropagation(); cancelAnimationFrame(anim); miniSurukle = true; mini.setPointerCapture(e.pointerId); miniGit(e); });
+  mini.addEventListener('pointerdown', (e) => { e.stopPropagation(); cancelAnimationFrame(anim); animde = false; miniSurukle = true; mini.setPointerCapture(e.pointerId); miniGit(e); });
   mini.addEventListener('pointermove', (e) => miniSurukle && miniGit(e));
   mini.addEventListener('pointerup', () => { miniSurukle = false; });
 
@@ -617,6 +697,7 @@
         if (oz2.en_geri_evre !== null) panel.appendChild(satir('En geri evre', `${oz2.en_geri_evre} · ${EVRE[oz2.en_geri_evre]}`));
       }
       if (d.dayanak && d.dayanak.length) panel.appendChild(satir('Dayanak', d.dayanak.join(', ')));
+      if (d.tur === 'bilesen') panel.appendChild(satir('Yerleşim', d.repo ? `${d.repo}${d.klasor ? ' · ' + d.klasor : ''}` : 'Kod deposu yok (ilerleme karar deposunda)'));
       if (d.tur === 'asama') panel.appendChild(satir('Aşama durumu', { aktif: 'Aktif', bekliyor: 'Bekliyor', tamamlandi: 'Tamamlandı' }[d.asama_durumu] || '—'));
       if (d.onay === 'onay_bekliyor') panel.appendChild(satir('Onay', 'Bekliyor'));
       if (d.kaynak) panel.appendChild(satir('Tanım', ghBag(d.kaynak) || '—'));

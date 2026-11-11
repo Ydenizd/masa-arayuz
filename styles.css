@@ -75,6 +75,9 @@ button, input { font-family: inherit; }
 .t-proje .cerceve, .t-proje .cerceve2 { stroke: var(--vurgu); }
 .t-asama.aktif .cerceve { stroke: var(--vurgu); stroke-width: 2.4; }
 .t-asama.tamamlandi .cerceve { stroke: var(--bitti); }
+.t-alan .cerceve, .t-alan .cerceve2 { stroke: #b49cff; }
+.t-alan .cerceve { stroke-dasharray: 10 4; }
+.d-yer { fill: #8fb3df; }
 .d-bekliyor .cerceve { stroke: var(--bekler); stroke-dasharray: 5 4; }
 .d-suruyor .cerceve, .d-suruyor .cerceve2 { stroke: var(--surer); }
 .d-engelli .cerceve, .d-engelli .cerceve2 { stroke: var(--engel); }
@@ -180,3 +183,9 @@ button, input { font-family: inherit; }
   #mini { width: 160px; height: 100px; } #koordinat { bottom: 124px; }
   .marka p { display: none; } .sekme { min-width: 130px; }
 }
+
+/* akış yerleşimi */
+.akis-ok { fill: none; stroke: var(--vurgu); stroke-width: 2.5; opacity: .7; }
+.bant-ad { font: 600 30px var(--mono); letter-spacing: .14em; fill: var(--vurgu); opacity: .8; }
+.bant-ad.kucuk { font-size: 22px; }
+.bant-cizgi { fill: none; stroke: var(--cizgi); stroke-width: 2; stroke-dasharray: 18 10; opacity: .6; }
