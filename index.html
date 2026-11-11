@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<!-- G3: yalnız kendi dosyaları; bağlantı yalnız GitHub API'ye. Satır içi betik ve stil yok. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<!-- G8 -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#071629">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Masa">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Masa</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="styles.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<noscript>Masa JavaScript gerektirir.</noscript>
+
+<!-- Kurulum ve kilit ekranları -->
+<section id="kapi" class="kapi" hidden>
+  <div class="kapi-kutu">
+    <div class="kicker">MASA</div>
+    <h1 id="kapi-baslik">Kilitli</h1>
+    <p id="kapi-aciklama" class="soluk"></p>
+
+    <form id="kurulum" hidden autocomplete="off">
+      <label>Masa deposu <span class="soluk">(sahip/depo)</span>
+        <input id="k-repo" name="repo" required pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+" spellcheck="false" autocapitalize="off">
+      </label>
+      <label>Cihaz anahtarı <span class="soluk">(fine-grained token)</span>
+        <input id="k-token" name="token" type="password" required spellcheck="false" autocapitalize="off">
+      </label>
+      <label>PIN <span class="soluk">(en az 6 hane; hiçbir yerde saklanmaz)</span>
+        <input id="k-pin" name="pin" type="password" inputmode="numeric" required minlength="6">
+      </label>
+      <label>PIN (tekrar)
+        <input id="k-pin2" name="pin2" type="password" inputmode="numeric" required minlength="6">
+      </label>
+      <button class="btn birincil" type="submit">Kaydet ve aç</button>
+    </form>
+
+    <form id="kilit" hidden autocomplete="off">
+      <label>PIN
+        <input id="l-pin" name="pin" type="password" inputmode="numeric" required>
+      </label>
+      <button class="btn birincil" type="submit">Aç</button>
+      <button class="btn baglanti" type="button" id="anahtar-sil">Anahtarı bu cihazdan sil</button>
+    </form>
+
+    <p id="kapi-hata" class="hata" role="alert"></p>
+  </div>
+</section>
+
+<!-- Masa -->
+<main id="masa" hidden>
+  <nav id="sekmeler" aria-label="Projeler"></nav>
+
+  <div id="tuval">
+    <svg id="sahne" xmlns="http://www.w3.org/2000/svg" aria-label="Proje haritası">
+      <defs>
+        <marker id="ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="ok-uc"/></marker>
+        <marker id="ok-surer" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="ok-uc surer"/></marker>
+      </defs>
+      <g id="dunya"></g>
+    </svg>
+  </div>
+
+  <header id="ust" class="hud">
+    <div class="marka">
+      <div class="kicker" id="m-kicker"></div>
+      <h1 id="m-baslik"></h1>
+      <p id="m-alt" class="soluk"></p>
+    </div>
+    <div class="bosluk"></div>
+    <div class="dugmeler">
+      <button class="btn" id="guncelle" type="button">GÜNCELLE</button>
+      <button class="btn" id="denetim" type="button" disabled title="Denetim yöntemi playbook hazır olunca kurulacak">DENETİM</button>
+      <button class="btn ikincil" id="kilitle" type="button" title="Anahtarı bellekten sil">KİLİTLE</button>
+      <div id="durum-satiri" class="soluk" role="status"></div>
+    </div>
+  </header>
+
+  <aside id="derinlik" class="hud" aria-label="Derinlik"></aside>
+  <aside id="katmanlar" class="hud" aria-label="Katmanlar"></aside>
+
+  <div id="zoom" class="hud">
+    <button type="button" id="z-art" title="Yakınlaştır">+</button>
+    <button type="button" id="z-oran" class="oran" title="%100">100%</button>
+    <button type="button" id="z-azal" title="Uzaklaştır">−</button>
+    <button type="button" id="z-sigdir" title="Tümünü sığdır (0)">⤢</button>
+  </div>
+
+  <div id="koordinat" class="hud soluk">X 0000 · Y 0000</div>
+  <svg id="mini" class="hud" aria-hidden="true"></svg>
+
+  <div id="antet" class="hud">
+    <div><div class="kicker">PROJE</div><span id="a-proje">—</span></div>
+    <div><div class="kicker">AKTİF AŞAMA</div><span id="a-asama">—</span></div>
+    <div><div class="kicker">SON TOPLAMA</div><span id="a-zaman">—</span></div>
+    <div><div class="kicker">ÖLÇEK</div><span id="a-olcek">1:1.00</span></div>
+    <div class="lejant">
+      <span><i class="lj bekliyor"></i>Bekliyor</span>
+      <span><i class="lj suruyor"></i>Sürüyor</span>
+      <span><i class="lj engelli"></i>Engelli</span>
+      <span><i class="lj bitti"></i>Bitti</span>
+    </div>
+  </div>
+
+  <aside id="panel" class="hud" aria-live="polite"></aside>
+</main>
+</body>
+</html>
