@@ -420,8 +420,21 @@
       ekleDugum(konumla(b, X.yaprak, yy, icerikW - X.yaprak - 16));
     });
 
-    // bağlar: düğümler yerleştikten sonra genişlikleri ölçülür
+    // bağlar: düğümler yerleştikten sonra genişlikleri ölçülür. Aşama sütunu (yazı tipi, rozet)
+    // bileşen sütununa yaklaşırsa bileşen ve paket sütunları sağa kaydırılır.
     const sag = (e) => e.offsetLeft + e.offsetWidth;
+    const kayma = Math.max(0, Math.max(...yer.gruplar.map((g) => sag(g.el))) + 36 - X.dal);
+    if (kayma) {
+      // paket dalları sağa kayarken önce kendi genişliklerinden verir; içerik ancak 300 px'in altına inerse genişler
+      const yaprakW = Math.max(300, icerikW - X.yaprak - 16 - kayma);
+      for (const e of dugumler) {
+        if (e.classList.contains('dal')) e.style.left = `${e.offsetLeft + kayma}px`;
+        if (e.classList.contains('yaprak')) { e.style.left = `${e.offsetLeft + kayma}px`; e.style.width = `${yaprakW}px`; }
+      }
+      X.dal += kayma; X.yaprak += kayma;
+      const w2 = Math.max(icerikW, yapraklar.length ? X.yaprak + yaprakW + 16 : X.dal + DAL_W + 16);
+      agac.style.width = `${w2}px`; oz(svg, { width: w2 });
+    }
     for (const g of yer.gruplar) {
       egri(sag(pb), projeY, X.asama, g.y);
       const ax = sag(g.el);
