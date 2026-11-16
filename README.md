@@ -1,6 +1,6 @@
 # Masa arayüzü
 
-Masanın (proje panosu) arayüzü: blueprint tuvali, proje sekmeleri, kademeli zoom (proje → aşama → bileşen → iş paketi → dosya), evre şeridi, denetim bulgusu rozetleri ve uyarılar.
+Masanın (proje panosu) arayüzü: proje sekmeleri, soldan sağa yatay ağaç (proje → aşama → bileşen / modül, iş alanları), dokununca açılan iş paketi dalları, yan panelde evre şeridi, denetim bulguları ve uyarılar (Masa Protokolü 7.2).
 
 **Bu depoda veri yoktur.** Proje bilgisi, anahtar ya da masa deposunun adı koda yazılmaz. Arayüz veriyi, cihazda PIN ile şifreli saklanan anahtarla doğrudan masanın özel deposundan (`durum/*.json`) okur. Kurallar Masa Protokolü'nde (Bölüm 6.3, 6.4, 7).
 
@@ -46,11 +46,12 @@ Masanın (proje panosu) arayüzü: blueprint tuvali, proje sekmeleri, kademeli z
 
 | İşlem | Fare / klavye | iPad |
 | --- | --- | --- |
-| Kaydır | Sürükle | Tek parmakla sürükle |
-| Yakınlaştır | Tekerlek (imlecin olduğu yere) | İki parmakla açıp kapat |
-| Dalı odakla | Karta çift tık | Karta çift dokun |
-| Ayrıntı | Karta tık | Karta dokun |
-| Tümünü sığdır | `0` ya da ⤢ | ⤢ |
+| İş paketlerini aç / kapat | Bileşene, modüle ya da iş alanına tık | Dokun |
+| Ayrıntı (yan panel) | Pakete, aşamaya ya da projeye tık | Dokun |
+| Kapat | `Esc` ya da boş alana tık | Boş alana dokun |
+| Kaydır (ekrana sığmazsa) | Tekerlek | Parmakla kaydır |
+
+Üstteki **İlerleme**, **Bulgular**, **Uyarılar** düğmeleri katmanları açıp kapatır.
 
 Diğer düğmeler:
 - **GÜNCELLE:** masa deposunda toplama iş akışını başlatır, bitince veriyi yeniden okur.
