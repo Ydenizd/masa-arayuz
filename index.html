@@ -8,10 +8,10 @@
 <!-- G8 -->
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="theme-color" content="#071629">
+<meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Masa">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Masa</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -61,57 +61,34 @@
 <main id="masa" hidden>
   <nav id="sekmeler" aria-label="Projeler"></nav>
 
-  <div id="tuval">
-    <svg id="sahne" xmlns="http://www.w3.org/2000/svg" aria-label="Proje haritası">
-      <defs>
-        <marker id="ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="ok-uc"/></marker>
-        <marker id="ok-surer" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="ok-uc surer"/></marker>
-      </defs>
-      <g id="dunya"></g>
-    </svg>
-  </div>
-
-  <header id="ust" class="hud">
+  <header id="ust">
     <div class="marka">
-      <div class="kicker" id="m-kicker"></div>
       <h1 id="m-baslik"></h1>
       <p id="m-alt" class="soluk"></p>
     </div>
     <div class="bosluk"></div>
+    <div id="katmanlar" aria-label="Katmanlar"></div>
     <div class="dugmeler">
-      <button class="btn" id="guncelle" type="button">GÜNCELLE</button>
-      <button class="btn" id="denetim" type="button" disabled title="Denetim yöntemi playbook hazır olunca kurulacak">DENETİM</button>
-      <button class="btn ikincil" id="kilitle" type="button" title="Anahtarı bellekten sil">KİLİTLE</button>
-      <div id="durum-satiri" class="soluk" role="status"></div>
+      <button class="btn" id="guncelle" type="button">Güncelle</button>
+      <button class="btn" id="denetim" type="button" disabled title="Denetim yöntemi playbook hazır olunca kurulacak">Denetim</button>
+      <button class="btn ikincil" id="kilitle" type="button" title="Anahtarı bellekten sil">Kilitle</button>
     </div>
+    <div id="durum-satiri" class="soluk" role="status"></div>
   </header>
 
-  <aside id="katmanlar" class="hud" aria-label="Katmanlar"></aside>
-
-  <div id="zoom" class="hud">
-    <button type="button" id="z-art" title="Yakınlaştır">+</button>
-    <button type="button" id="z-oran" class="oran" title="%100">100%</button>
-    <button type="button" id="z-azal" title="Uzaklaştır">−</button>
-    <button type="button" id="z-sigdir" title="Tümünü sığdır (0)">⤢</button>
+  <div id="tuval">
+    <div id="agac" aria-label="Proje ağacı"></div>
   </div>
 
-  <div id="koordinat" class="hud soluk">X 0000 · Y 0000</div>
-  <svg id="mini" class="hud" aria-hidden="true"></svg>
-
-  <div id="antet" class="hud">
-    <div><div class="kicker">PROJE</div><span id="a-proje">—</span></div>
-    <div><div class="kicker">AKTİF AŞAMA</div><span id="a-asama">—</span></div>
-    <div><div class="kicker">SON TOPLAMA</div><span id="a-zaman">—</span></div>
-    <div><div class="kicker">ÖLÇEK</div><span id="a-olcek">1:1.00</span></div>
-    <div class="lejant">
-      <span><i class="lj bekliyor"></i>Bekliyor</span>
-      <span><i class="lj suruyor"></i>Sürüyor</span>
-      <span><i class="lj engelli"></i>Engelli</span>
-      <span><i class="lj bitti"></i>Bitti</span>
-    </div>
+  <div id="lejant" class="lejant" aria-label="Durum işaretleri">
+    <span><i class="lj s-bitti">✓</i>bitti</span>
+    <span><i class="lj s-suruyor">▶</i>sürüyor</span>
+    <span><i class="lj s-engelli">■</i>engelli</span>
+    <span><i class="lj s-bekliyor">○</i>bekliyor</span>
+    <span><i class="lj s-yok">·</i>kayıt yok</span>
   </div>
 
-  <aside id="panel" class="hud" aria-live="polite"></aside>
+  <aside id="panel" aria-live="polite"></aside>
 </main>
 </body>
 </html>
