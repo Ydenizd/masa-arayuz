@@ -67,7 +67,18 @@
       <p id="m-alt" class="soluk"></p>
     </div>
     <div class="bosluk"></div>
+    <div class="grup" role="group" aria-label="Görünüm">
+      <button class="btn" id="g-agac" type="button" aria-pressed="true">Ağaç</button>
+      <button class="btn" id="g-pano" type="button" aria-pressed="false">Pano</button>
+    </div>
+    <button class="btn" id="son-degisiklikler" type="button">Son değişiklikler<span id="yeni-sayi" class="yeni-sayi"></span></button>
     <div id="katmanlar" aria-label="Katmanlar"></div>
+    <div class="grup" role="group" aria-label="Yakınlaştırma">
+      <button class="btn" id="z-eksi" type="button" aria-label="Uzaklaştır">−</button>
+      <span class="btn yuzde" id="z-yuzde" role="status">100%</span>
+      <button class="btn" id="z-arti" type="button" aria-label="Yakınlaştır">+</button>
+      <button class="btn" id="z-sigdir" type="button">Sığdır</button>
+    </div>
     <div class="dugmeler">
       <button class="btn" id="guncelle" type="button">Güncelle</button>
       <button class="btn" id="denetim" type="button" disabled title="Denetim yöntemi playbook hazır olunca kurulacak">Denetim</button>
@@ -77,7 +88,10 @@
   </header>
 
   <div id="tuval">
-    <div id="agac" aria-label="Proje ağacı"></div>
+    <div id="sahne">
+      <div id="agac" aria-label="Proje ağacı"></div>
+      <div id="pano" aria-label="Kanban panosu" hidden></div>
+    </div>
   </div>
 
   <div id="lejant" class="lejant" aria-label="Durum işaretleri">
