@@ -226,9 +226,11 @@
     return k.durum === 'bitti' || (k.evre >= 5 && k.durum !== 'vazgecildi') ? 'bitti' : k.durum;
   }
   const paketleri = (d) => { const o = []; (function gez(x) { for (const c of x.cocuk) { if (c.tur === 'ip') o.push(c); else if (c.tur !== 'dosya') gez(c); } })(d); return o; };
+  // Sayımlarda yalnız plana girmiş paketler; onay bekleyen paket dalda görünür ama sayılmaz (masa ADR-0004, özetle aynı).
+  const sayilan = (d) => paketleri(d).filter((ip) => ip.onay !== 'onay_bekliyor');
   function sayim(m, d) {
     const s2 = { bitti: 0, suruyor: 0, engelli: 0, bekliyor: 0, yok: 0 };
-    for (const ip of paketleri(d)) { const du = paketDurumu(m, ip.id); if (du in s2) s2[du]++; }
+    for (const ip of sayilan(d)) { const du = paketDurumu(m, ip.id); if (du in s2) s2[du]++; }
     return s2;
   }
 
@@ -380,7 +382,7 @@
     // proje
     const kok = yer.kok;
     const pb = ekleDugum(konumla(h('button', { class: 'dugum proje', type: 'button', 'data-id': kok.id, title: m.proje.ad },
-      h('span', { class: 'ad' }, m.proje.kimlik.toUpperCase()), h('span', { class: 'alt' }, `${paketleri(kok).length} paket`), ...rozetler(kok)), X.proje, (satirlar[0] + satirlar[satirlar.length - 1]) / 2));
+      h('span', { class: 'ad' }, m.proje.kimlik.toUpperCase()), h('span', { class: 'alt' }, `${sayilan(kok).length} paket`), ...rozetler(kok)), X.proje, (satirlar[0] + satirlar[satirlar.length - 1]) / 2));
     const projeY = (satirlar[0] + satirlar[satirlar.length - 1]) / 2;
 
     for (const g of yer.gruplar) {
@@ -507,7 +509,7 @@
     $('#m-baslik').textContent = m ? m.proje.ad : 'Proje yok';
     const genel = m ? m.katmanlar.uyarilar.filter((u) => !u.dugum) : [];
     const asama = m && m.aktif_asama && m.dugumler.find((d) => d.id === m.aktif_asama);
-    const parca = m ? [`${yer ? paketleri(yer.kok).length : 0} iş paketi`, asama ? `aktif ${asama.ad.toLocaleLowerCase('tr')}` : null, `son toplama ${tarih(m.uretim.zaman)}`] : [];
+    const parca = m ? [`${yer ? sayilan(yer.kok).length : 0} iş paketi`, asama ? `aktif ${asama.ad.toLocaleLowerCase('tr')}` : null, `son toplama ${tarih(m.uretim.zaman)}`] : [];
     if (genel.length) parca.push(`${genel.length} genel uyarı`);
     $('#m-alt').textContent = parca.filter(Boolean).join(' · ');
     const kat = temizle($('#katmanlar'));
