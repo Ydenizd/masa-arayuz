@@ -193,6 +193,19 @@
   // ================================================================ durum
   let projeler = [], etkin = 0, secili = null;
   let yer = null; // { dug: Map, kok, gruplar, bag }
+
+  // ================================================================ cihazdaki tercihler (ADR-0023)
+  // Görünüm, yakınlaştırma ve son bakış zamanı yalnız bu cihazda durur; masa reposuna yazılmaz.
+  const TERCIH = 'masa.tercih.v1';
+  const tercih = (() => { try { const t = JSON.parse(localStorage.getItem(TERCIH) || 'null'); if (t && t.v === 1) return t; } catch { /* yok say */ } return { v: 1, gorunum: 'agac', zoom: {}, bakis: {} }; })();
+  const tercihYaz = () => { try { localStorage.setItem(TERCIH, JSON.stringify(tercih)); } catch { /* yok say */ } };
+  // yenilik eşiği: bu oturumda proje ilk açıldığında cihazdaki son bakış; sonra son bakış şimdi olur
+  const esik = {}, parladi = new Set();
+  function esikAl(kimlik) {
+    if (!(kimlik in esik)) { esik[kimlik] = tercih.bakis[kimlik] || null; tercih.bakis[kimlik] = new Date().toISOString(); tercihYaz(); }
+    return esik[kimlik];
+  }
+  const yeniMi = (k, e) => !!(e && k && k.degisim && Date.parse(k.degisim) > Date.parse(e));
   const katman = { ilerleme: true, denetim: true, uyari: true };
   const p = () => projeler[etkin];
   function durumSha(repo) { const k = p() && p().kaynaklar.find((x) => x.repo === repo); return k && k.sha; }
@@ -298,9 +311,36 @@
     yer = m ? yapi(m) : null;
     if (m && !yer) $('#durum-satiri').textContent = 'Durum dosyasında proje düğümü yok.';
     if (yer) yer.bag = bagla(m, yer);
+    if (yer) yeniHesapla(m);
+    zoomUygula(m ? tercih.zoom[m.proje.kimlik] || 1 : 1, false);
     hudCiz();
-    agacCiz();
+    gorunumCiz();
+    if (m) parladi.add(m.proje.kimlik);
   }
+
+  // son bakıştan beri değişen paketler ve üst düğümleri
+  function yeniHesapla(m) {
+    const e = esikAl(m.proje.kimlik);
+    yer.yeni = new Set();
+    for (const [id, k] of Object.entries(m.katmanlar.ilerleme.paketler)) {
+      if (!yeniMi(k, e)) continue;
+      for (let d = yer.dug.get(id); d; d = d.ust ? yer.dug.get(d.ust) : null) yer.yeni.add(d.id);
+    }
+  }
+  const yeniSinif = (id) => (yer.yeni && yer.yeni.has(id) ? ` yeni${parladi.has(p().proje.kimlik) ? '' : ' parla'}` : '');
+  // dalda yalnız nokta (ad kısalmasın); kartta ve pakette nokta ve "yeni" yazısı
+  const yeniIsaret = (id, kisa = false) => (yer.yeni && yer.yeni.has(id) ? h('span', { class: `yeni-isaret${kisa ? ' kisa' : ''}`, title: 'Son bakışından beri değişti', 'aria-label': 'yeni' }, kisa ? '' : 'yeni') : null);
+
+  // ================================================================ görünüm seçimi
+  const panoEl = $('#pano');
+  function gorunumCiz() {
+    const pano = tercih.gorunum === 'pano';
+    $('#g-agac').setAttribute('aria-pressed', String(!pano));
+    $('#g-pano').setAttribute('aria-pressed', String(pano));
+    agac.hidden = pano; panoEl.hidden = !pano;
+    if (pano) panoCiz(); else agacCiz();
+  }
+  function gorunumSec(g) { if (tercih.gorunum !== g) { tercih.gorunum = g; tercihYaz(); panelKapat(); acik = null; gorunumCiz(); } }
 
   // sayım: ✓ ▶ ■ ○ · ; sıfır olanlar (bitti hariç) yazılmaz
   function sayimEl(m, d) {
@@ -337,7 +377,7 @@
     document.documentElement.style.setProperty('--ust', `${$('#ust').offsetHeight}px`);
     const m = p();
     if (!m || !yer) return;
-    const genis = tuval.clientWidth, yuksek = tuval.clientHeight;
+    const genis = tuval.clientWidth / olcek, yuksek = tuval.clientHeight / olcek;
     const PAY = 12, GRUP_ARA = 10;
     const X = { proje: 16, asama: 150, dal: 320, yaprak: 736 }, DAL_W = 366;
     const satirSay = yer.gruplar.reduce((t, g) => t + Math.max(1, g.dallar.length), 0);
@@ -381,7 +421,7 @@
 
     // proje
     const kok = yer.kok;
-    const pb = ekleDugum(konumla(h('button', { class: 'dugum proje', type: 'button', 'data-id': kok.id, title: m.proje.ad },
+    const pb = ekleDugum(konumla(h('button', { class: `dugum proje${yeniSinif(kok.id)}`, type: 'button', 'data-id': kok.id, title: m.proje.ad },
       h('span', { class: 'ad' }, m.proje.kimlik.toUpperCase()), h('span', { class: 'alt' }, `${sayilan(kok).length} paket`), ...rozetler(kok)), X.proje, (satirlar[0] + satirlar[satirlar.length - 1]) / 2));
     const projeY = (satirlar[0] + satirlar[satirlar.length - 1]) / 2;
 
@@ -402,8 +442,8 @@
       }
       g.dallar.forEach((c, i) => {
         const bosDal = !paketleri(c).length;
-        const b = h('button', { class: `dugum dal t-${c.tur}${c.id === acik ? ' acik' : ''}`, type: 'button', 'data-id': c.id, 'aria-expanded': String(c.id === acik), title: c.kapsam ? `${c.ad}: ${c.kapsam}` : c.ad },
-          h('span', { class: 'kod' }, kod(c)), h('span', { class: 'ad' }, c.ad),
+        const b = h('button', { class: `dugum dal t-${c.tur}${c.id === acik ? ' acik' : ''}${yeniSinif(c.id)}`, type: 'button', 'data-id': c.id, 'aria-expanded': String(c.id === acik), title: c.kapsam ? `${c.ad}: ${c.kapsam}` : c.ad },
+          h('span', { class: 'kod' }, kod(c)), h('span', { class: 'ad' }, c.ad), yeniIsaret(c.id, true),
           c.tur === 'modul' && c.bilesen && !g.dallar.some((x) => x.id === c.bilesen) ? h('span', { class: 'kod' }, `· ${c.bilesen.slice(8)}`) : null,
           h('span', { class: 'bosluk' }), ...rozetler(c),
           bosDal ? h('span', { class: 'bos-yazi' }, 'henüz planlanmadı') : sayimEl(m, c));
@@ -415,9 +455,9 @@
     // yapraklar
     yapraklar.forEach((ip, j) => {
       const du = paketDurumu(m, ip.id), yy = yBas + j * yAdim + yAdim / 2;
-      const b = h('button', { class: `dugum yaprak y-${du}`, type: 'button', 'data-id': ip.id, title: ip.kapsam ? `${ip.ad}: ${ip.kapsam}` : ip.ad },
+      const b = h('button', { class: `dugum yaprak y-${du}${yeniSinif(ip.id)}`, type: 'button', 'data-id': ip.id, title: ip.kapsam ? `${ip.ad}: ${ip.kapsam}` : ip.ad },
         h('span', { class: 'isaret' }, ISARET[du]), h('span', { class: 'no' }, ip.id.slice(3)), h('span', { class: 'ad' }, ip.ad),
-        h('span', { class: 'sag' }, sagMetin(m, ip, du)), ...rozetler(ip));
+        h('span', { class: 'sag' }, sagMetin(m, ip, du)), h('span', { class: 'ekler' }, yeniIsaret(ip.id), ...rozetler(ip)));
       b.style.height = `${Math.min(yAdim - 4, 40)}px`;
       ekleDugum(konumla(b, X.yaprak, yy, icerikW - X.yaprak - 16));
     });
@@ -449,10 +489,80 @@
   }
 
   function isaretle(id) {
-    agac.querySelectorAll('.dugum.secili').forEach((x) => x.classList.remove('secili'));
+    $('#sahne').querySelectorAll('.secili').forEach((x) => x.classList.remove('secili'));
     if (!id) return;
-    const g = agac.querySelector(`.dugum[data-id="${CSS.escape(id)}"]`); if (g) g.classList.add('secili');
+    $('#sahne').querySelectorAll(`[data-id="${CSS.escape(id)}"]`).forEach((g) => g.classList.add('secili'));
   }
+
+  // ================================================================ pano (ADR-0023, protokol 7.2)
+  // Sütun toplayıcının yazdığı "kanban" alanıdır (ADR-0021); arayüz kuralı yeniden hesaplamaz.
+  const SUTUN = [['plan', 'Plan'], ['hazir', 'Hazır'], ['suruyor', 'Sürüyor'], ['inceleme', 'İnceleme'], ['bitti', 'Bitti']];
+  function parcaKodu(d) { for (let x = yer.dug.get(d.ust); x; x = x.ust ? yer.dug.get(x.ust) : null) if (x.tur === 'bilesen' || x.tur === 'modul' || x.tur === 'alan') return kod(x); return ''; }
+  function panoCiz() {
+    temizle(panoEl);
+    document.documentElement.style.setProperty('--ust', `${$('#ust').offsetHeight}px`);
+    const m = p();
+    if (!m || !yer) return;
+    const pk = m.katmanlar.ilerleme.paketler;
+    const kartlar = [...yer.dug.values()].filter((d) => d.tur === 'ip' && pk[d.id] && pk[d.id].kanban);
+    if (!kartlar.length && Object.keys(pk).length) {
+      panoEl.appendChild(h('p', { class: 'soluk pano-bos' }, 'Bu durum dosyasında Kanban sütunu yok. Pano, masa toplayıcısının 0.3 sürümüyle gelir; Güncelle ile yeniden toplayın.'));
+      return;
+    }
+    const kayitsiz = [...yer.dug.values()].filter((d) => d.tur === 'ip' && !pk[d.id]).length;
+    const izgara = h('div', { class: 'pano-izgara' });
+    for (const [sut, ad] of SUTUN) {
+      const liste = kartlar.filter((d) => pk[d.id].kanban === sut)
+        .sort((a, b) => (Date.parse(pk[b.id].degisim) || 0) - (Date.parse(pk[a.id].degisim) || 0) || a.id.localeCompare(b.id, 'tr'));
+      const s2 = h('section', { class: 'sutun', 'aria-label': ad }, h('div', { class: 'sutun-bas' }, h('span', {}, ad), h('span', {}, String(liste.length))));
+      for (const d of liste) {
+        const k = pk[d.id], engelli = k.durum === 'engelli';
+        s2.appendChild(h('button', { class: `kart${engelli ? ' k-engelli' : ''}${sut === 'bitti' ? ' k-bitti' : ''}${yeniSinif(d.id)}`, type: 'button', 'data-id': d.id, title: d.kapsam ? `${d.ad}: ${d.kapsam}` : d.ad },
+          h('span', { class: 'kart-ust' }, h('span', { class: 'no' }, d.id.slice(3)), h('span', { class: 'parca' }, parcaKodu(d)), h('span', { class: 'bosluk' }), yeniIsaret(d.id), ...rozetler(d)),
+          h('span', { class: 'kart-ad' }, d.ad),
+          h('span', { class: 'kart-alt' }, sut === 'bitti' ? 'yayında' : `evre ${k.evre} · ${EVRE[k.evre]}${engelli ? ' · engelli' : ''}${d.onay === 'onay_bekliyor' ? ' · onay bekliyor' : ''}`)));
+      }
+      izgara.appendChild(s2);
+    }
+    panoEl.appendChild(izgara);
+    if (kayitsiz) panoEl.appendChild(h('p', { class: 'soluk pano-not' }, `${kayitsiz} iş paketinin ilerleme kaydı yok; panoda görünmez, ağaçta "kayıt yok" olarak durur.`));
+    katmanSiniflari();
+    if (secili) isaretle(secili);
+  }
+  panoEl.addEventListener('click', (e) => {
+    const b = e.target.closest('.kart[data-id]');
+    if (b) panelAc(b.getAttribute('data-id')); else panelKapat();
+  });
+
+  // ================================================================ yakınlaştırma (ADR-0023)
+  // Yalnız sahne büyür; üst şerit ve yan panel sabit kalır. Düzey proje başına cihazda tutulur.
+  let olcek = 1;
+  const sahne = $('#sahne');
+  function zoomUygula(z, kaydet = true) {
+    olcek = Math.round(sinir(z, 0.4, 2) * 100) / 100;
+    sahne.style.zoom = String(olcek);
+    $('#z-yuzde').textContent = `${Math.round(olcek * 100)}%`;
+    const m = p();
+    if (kaydet && m) { tercih.zoom[m.proje.kimlik] = olcek; tercihYaz(); }
+  }
+  function zoomDegis(z) { zoomUygula(z); if (tercih.gorunum === 'agac') agacCiz(); }
+  function sigdir() {
+    zoomUygula(1, false);
+    if (tercih.gorunum === 'agac') agacCiz();
+    const w = sahne.scrollWidth, hh = sahne.scrollHeight;
+    zoomDegis(Math.min(tuval.clientWidth / w, tercih.gorunum === 'pano' ? 1.5 : tuval.clientHeight / hh, 1.5));
+  }
+  $('#z-arti').addEventListener('click', () => zoomDegis(olcek + 0.1));
+  $('#z-eksi').addEventListener('click', () => zoomDegis(olcek - 0.1));
+  $('#z-sigdir').addEventListener('click', sigdir);
+  tuval.addEventListener('wheel', (e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomDegis(olcek * Math.exp(-e.deltaY * 0.002)); } }, { passive: false });
+  // iPad: iki parmak yalnız sahneyi büyütür; sayfanın kendi yakınlaştırması durdurulur
+  let parmak0 = 0, olcek0 = 1;
+  const aralik = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  tuval.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { parmak0 = aralik(e.touches); olcek0 = olcek; } }, { passive: true });
+  tuval.addEventListener('touchmove', (e) => { if (e.touches.length === 2 && parmak0) { e.preventDefault(); zoomUygula(olcek0 * aralik(e.touches) / parmak0); } }, { passive: false });
+  tuval.addEventListener('touchend', (e) => { if (parmak0 && e.touches.length < 2) { parmak0 = 0; zoomDegis(olcek); } }, { passive: true });
+  for (const ad of ['gesturestart', 'gesturechange']) document.addEventListener(ad, (e) => e.preventDefault(), { passive: false });
 
   function dokun(id) {
     const d = yer && yer.dug.get(id); if (!d) return;
@@ -463,7 +573,7 @@
       const b = agac.querySelector(`.dugum[data-id="${CSS.escape(id)}"]`);
       if (b) b.focus({ preventScroll: true });
       // dar ekranda paketler sağda kalırsa oraya kaydır
-      if (acik && agac.offsetWidth > tuval.clientWidth) tuval.scrollTo({ left: 308, behavior: 'smooth' });
+      if (acik && agac.offsetWidth * olcek > tuval.clientWidth) tuval.scrollTo({ left: 308 * olcek, behavior: 'smooth' });
       if (!acik) tuval.scrollTo({ left: 0, behavior: 'smooth' });
     } else {
       panelAc(id);
@@ -481,12 +591,12 @@
     if (e.key === 'Escape') kapat();
   });
   let yenidenBoyut = 0;
-  addEventListener('resize', () => { clearTimeout(yenidenBoyut); yenidenBoyut = setTimeout(agacCiz, 120); });
+  addEventListener('resize', () => { clearTimeout(yenidenBoyut); yenidenBoyut = setTimeout(() => (tercih.gorunum === 'pano' ? panoCiz() : agacCiz()), 120); });
 
   function katmanSiniflari() {
-    agac.classList.toggle('gizle-ilerleme', !katman.ilerleme);
-    agac.classList.toggle('gizle-denetim', !katman.denetim);
-    agac.classList.toggle('gizle-uyari', !katman.uyari);
+    sahne.classList.toggle('gizle-ilerleme', !katman.ilerleme);
+    sahne.classList.toggle('gizle-denetim', !katman.denetim);
+    sahne.classList.toggle('gizle-uyari', !katman.uyari);
   }
 
   // ================================================================ üst şerit
@@ -512,6 +622,8 @@
     const parca = m ? [`${yer ? sayilan(yer.kok).length : 0} iş paketi`, asama ? `aktif ${asama.ad.toLocaleLowerCase('tr')}` : null, `son toplama ${tarih(m.uretim.zaman)}`] : [];
     if (genel.length) parca.push(`${genel.length} genel uyarı`);
     $('#m-alt').textContent = parca.filter(Boolean).join(' · ');
+    const yeniPaket = yer && yer.yeni ? [...yer.yeni].filter((id) => id.startsWith('ip:')).length : 0;
+    $('#yeni-sayi').textContent = yeniPaket ? String(yeniPaket) : '';
     const kat = temizle($('#katmanlar'));
     [['ilerleme', 'İlerleme'], ['denetim', 'Bulgular'], ['uyari', 'Uyarılar']].forEach(([k, ad]) => {
       const b = h('button', { class: `cip${katman[k] ? ' acik' : ''}`, type: 'button', 'aria-pressed': String(katman[k]) }, ad);
@@ -541,6 +653,7 @@
         const serit = h('div', { class: 'evre-seridi' }); for (let i = 0; i < 8; i++) serit.appendChild(h('span', { class: i <= kay.evre ? 'dolu' : '' }));
         ekle(panel, [serit, satir('Evre', `${kay.evre} · ${EVRE[kay.evre]}`), satir('Durum', DURUM[kay.durum]),
           satir('Kayıt zamanı', tarih(kay.guncelleme))]);
+        if (kay.degisim) panel.appendChild(satir('Son değişiklik', tarih(kay.degisim)));
         if (kay.engel) ekle(panel, [h('h3', {}, 'ENGEL'), h('p', {}, kay.engel)]);
         if (kay.not) ekle(panel, [h('h3', {}, 'NOT'), h('p', {}, kay.not)]);
         panel.appendChild(satir('Kayıt', ghBag(kay.kaynak) || '—'));
@@ -589,6 +702,33 @@
     }
     panel.classList.add('acik');
   }
+  // son 7 günün değişiklikleri, yeniden eskiye (ADR-0023)
+  function sonDegisiklikler() {
+    const m = p(); if (!m || !yer) return;
+    secili = null; isaretle(null);
+    const panel = temizle($('#panel'));
+    const kapat = h('button', { class: 'kapat', type: 'button', title: 'Kapat' }, '×');
+    kapat.addEventListener('click', panelKapat);
+    const e = esik[m.proje.kimlik];
+    ekle(panel, [kapat, h('div', { class: 'kicker' }, 'SON DEĞİŞİKLİKLER · 7 GÜN'), h('h2', {}, m.proje.ad),
+      h('p', { class: 'liste-kapsam' }, e ? `Son bakışın: ${tarih(e)}. Mor olanlar o zamandan beri değişti.` : 'Bu cihazda ilk bakış; bundan sonraki değişiklikler mor işaretlenir.')]);
+    const sinirZaman = Date.now() - 7 * 864e5;
+    const liste = Object.entries(m.katmanlar.ilerleme.paketler)
+      .filter(([id, k]) => yer.dug.has(id) && Date.parse(k.degisim) >= sinirZaman)
+      .sort((a, b) => Date.parse(b[1].degisim) - Date.parse(a[1].degisim));
+    if (!liste.length) panel.appendChild(h('p', { class: 'soluk' }, 'Son 7 günde değişen iş paketi yok.'));
+    for (const [id, k] of liste) {
+      const d = yer.dug.get(id);
+      const sut = (SUTUN.find((x) => x[0] === k.kanban) || [null, DURUM[k.durum]])[1];
+      const b = h('button', { class: `degisim${yeniMi(k, e) ? ' yeni' : ''}`, type: 'button', 'data-id': id },
+        h('span', { class: 'no' }, id.slice(3)), h('span', { class: 'ad' }, d.ad),
+        h('span', { class: 'zaman' }, `${sut}${k.durum === 'engelli' ? ' · engelli' : ''} · evre ${k.evre} · ${tarih(k.degisim)}`));
+      b.addEventListener('click', () => panelAc(id));
+      panel.appendChild(b);
+    }
+    panel.classList.add('acik');
+  }
+
   function panelKapat() {
     $('#panel').classList.remove('acik');
     secili = null; isaretle(null);
@@ -607,6 +747,9 @@
     b.disabled = false; b.classList.remove('mesgul');
   });
   $('#kilitle').addEventListener('click', kilitle);
+  $('#g-agac').addEventListener('click', () => gorunumSec('agac'));
+  $('#g-pano').addEventListener('click', () => gorunumSec('pano'));
+  $('#son-degisiklikler').addEventListener('click', () => ($('#panel').classList.contains('acik') && !secili ? panelKapat() : sonDegisiklikler()));
   $('#kurulum').addEventListener('submit', kurulumGonder);
   $('#kilit').addEventListener('submit', kilitGonder);
   $('#anahtar-sil').addEventListener('click', () => { kasaSil(); oturum = null; kapiGoster('kurulum'); });

@@ -164,3 +164,55 @@ button.dugum:hover { border-color: rgba(156, 195, 240, .7); background: #0f2c52;
 .kicker, .dugum.dal .kod, .yaprak .no, .sayim, .sekme .ek, .marka p, #durum-satiri, .etiket-aktif, .rozet, .uyari-isaret { font-family: var(--mono); }
 .dugum.proje .ad, .dugum.asama .ad { font-size: 17px; }
 .marka h1 { font-size: 21px; }
+
+/* ---------- görünüm, pano, yakınlaştırma, son değişiklikler (ADR-0023) ---------- */
+:root { --yeni: #c79bff; --yeni-acik: rgba(199, 155, 255, .35); }
+.grup { display: flex; }
+.grup .btn { border-radius: 0; margin-left: -1px; }
+.grup .btn:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+.grup .btn:last-child { border-radius: 0 8px 8px 0; }
+.btn[aria-pressed="true"] { background: #0f2c52; border-color: var(--vurgu); }
+.btn.yuzde { min-width: 56px; display: inline-grid; place-items: center; color: var(--soluk); cursor: default; }
+.yeni-sayi:not(:empty) { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 9px; background: var(--yeni); color: #1b0f33; font-weight: 700; }
+#sahne { position: relative; min-width: 100%; min-height: 100%; width: max-content; }
+#tuval { touch-action: pan-x pan-y; }
+
+.yeni-isaret { flex: none; display: inline-flex; align-items: center; gap: 4px; font: 600 10.5px var(--mono); letter-spacing: .04em; color: var(--yeni); text-transform: uppercase; }
+.yeni-isaret::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--yeni); }
+.parla { animation: parla 1s ease-in-out 3; }
+@keyframes parla { 50% { box-shadow: 0 0 0 4px var(--yeni-acik); } }
+@media (prefers-reduced-motion: reduce) { .parla { animation: none; } }
+.yaprak .ekler { display: inline-flex; gap: 6px; align-items: center; }
+
+.pano-izgara { display: grid; grid-template-columns: repeat(5, 248px); gap: 12px; padding: 14px 16px; align-items: start; }
+.sutun { background: rgba(7, 22, 41, .72); border: 1px solid var(--cizgi); border-radius: 10px; padding: 8px; max-height: calc(100vh - var(--sekme) - var(--ust, 65px) - 40px); overflow: auto; }
+.sutun-bas { display: flex; justify-content: space-between; font: 600 12px var(--mono); letter-spacing: .06em; color: var(--soluk); padding: 2px 4px 8px; text-transform: uppercase; }
+.kart { display: grid; gap: 3px; width: 100%; text-align: left; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 8px; color: var(--yazi); font: inherit;
+  padding: 8px 10px; margin-bottom: 8px; cursor: pointer; min-height: 44px; }
+.kart:hover { border-color: rgba(156, 195, 240, .7); background: #0f2c52; }
+.kart:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+.kart.secili { border-color: var(--vurgu); box-shadow: 0 0 0 3px var(--vurgu-acik); }
+.kart-ust { display: flex; align-items: center; gap: 6px; }
+.kart .no { font: 600 12px var(--mono); }
+.kart .parca { font: 11px var(--mono); color: var(--soluk); }
+.kart .bosluk { flex: 1; }
+.kart-ad { font-size: 14px; line-height: 1.3; }
+.kart-alt { font: 11px var(--mono); color: var(--soluk); }
+.kart.k-engelli { border-left: 3px solid var(--engelli); }
+.kart.k-engelli .kart-alt { color: var(--engelli); }
+.kart.k-bitti .no::before { content: "✓ "; color: var(--bitti); }
+.pano-not, .pano-bos { padding: 0 16px; font-size: 12.5px; }
+
+#panel .degisim { display: grid; grid-template-columns: 58px 1fr; gap: 2px 8px; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--cizgi);
+  color: var(--yazi); font: inherit; padding: 9px 2px; cursor: pointer; min-height: 44px; }
+#panel .degisim:hover { background: rgba(156, 195, 240, .06); }
+#panel .degisim .no { font: 600 12px var(--mono); color: var(--soluk); }
+#panel .degisim.yeni .no { color: var(--yeni); }
+#panel .degisim .ad { font-size: 13.5px; }
+#panel .degisim .zaman { grid-column: 2; font: 11px var(--mono); color: var(--soluk); }
+.gizle-ilerleme .kart-alt { visibility: hidden; }
+@media (max-width: 900px) { .btn.yuzde { display: none; } }
+
+.yeni-isaret.kisa { gap: 0; }
+/* üst şerit: proje adı kendi satırına sığar, düğmeler alta kayar */
+.marka { flex: 1 1 320px; min-width: 260px; }
