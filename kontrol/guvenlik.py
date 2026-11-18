@@ -2,7 +2,8 @@
 
 G1  Depoda yalnız arayüz dosyaları; veri dosyası ve anahtar biçiminde metin yok.
 G2  app.js'de HTML yorumlayan API yok (innerHTML, outerHTML, insertAdjacentHTML, document.write, eval, new Function).
-G3  index.html'de CSP var; betik yalnız 'self', bağlantı yalnız api.github.com; satır içi betik ve stil yok.
+G3  index.html'de CSP var; betik yalnız 'self', bağlantı yalnız api.github.com ve api.anthropic.com (lamba, G9);
+    satır içi betik ve stil yok.
 G4  Kodda izinli adresler dışında dış adres yok.
 G8  noindex etiketi var.
 """
@@ -17,8 +18,8 @@ hata = hatalar.append
 
 IZINLI_UZANTI = {".html", ".css", ".js", ".svg", ".png", ".webmanifest", ".md", ".yml", ".py"}
 IZINLI_AD = {".gitignore", ".nojekyll", "LICENSE"}
-IZINLI_ADRES = {"https://api.github.com", "https://github.com/", "http://www.w3.org/2000/svg"}
-ANAHTAR = re.compile(r"(github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)")
+IZINLI_ADRES = {"https://api.github.com", "https://api.anthropic.com", "https://github.com/", "http://www.w3.org/2000/svg"}
+ANAHTAR = re.compile(r"(sk-ant-[A-Za-z0-9_-]{20,}|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)")
 YASAK_API = re.compile(r"\b(innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\s*\(|new\s+Function)\b")
 
 dosyalar = subprocess.run(["git", "ls-files"], cwd=KOK, capture_output=True, text=True, check=True).stdout.split()
@@ -48,8 +49,8 @@ else:
         hata("G3: default-src 'none' değil")
     if c.get("script-src") != ["'self'"]:
         hata("G3: script-src yalnız 'self' olmalı")
-    if c.get("connect-src") != ["https://api.github.com"]:
-        hata("G3: connect-src yalnız https://api.github.com olmalı")
+    if c.get("connect-src") != ["https://api.github.com", "https://api.anthropic.com"]:
+        hata("G3: connect-src yalnız https://api.github.com ve https://api.anthropic.com olmalı")
     if "'unsafe-inline'" in csp.group(1) or "'unsafe-eval'" in csp.group(1):
         hata("G3: unsafe-inline / unsafe-eval var")
 for m in re.finditer(r"<script\b([^>]*)>(.*?)</script>", html, re.S):
