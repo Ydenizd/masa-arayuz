@@ -740,7 +740,7 @@
 
 
   // ================================================================ lamba: dijital danışman (ADR-0026, G9)
-  // "Not al" ya da soru, masa deposundaki lamba iş akışını başlatır (Claude Code, sahibin Claude Pro aboneliği).
+  // "Ne durumdayız?" ya da soru, masa deposundaki lamba iş akışını başlatır (Claude Code, sahibin Claude Pro aboneliği).
   // Yanıt `lamba` dalındaki lamba/<proje>.json'a yazılır; arayüz onu bekleyip okur. Yanıt düz metindir (G2).
   const LAMBA_BEKLE = { aralik: 6000, sure: 5 * 60000 };
   let lambaBekleyen = null; // { no, kimlik }
@@ -772,7 +772,7 @@
       const kayitlar = await lambaKaydi(m.proje.kimlik);
       if (p() !== m) return;
       kayitlar.slice(-6).forEach(lambaKayitGoster);
-      if (!kayitlar.length) lambaMesaj('lamba', '"Not al"a bas, bugün için kısa notlar vereyim. Ya da bir şey sor. Cevabım 1–2 dakika sürer.');
+      if (!kayitlar.length) lambaMesaj('lamba', '"Ne durumdayız?"a bas; projenin eksiğini ve bugün için seçenekleri kısaca yazayım. Ya da bir şey sor. Cevabım 1–2 dakika sürer.');
     } catch (e) { lambaMesaj('hata', e.message); }
     if (lambaBekleyen && lambaBekleyen.kimlik === m.proje.kimlik) lambaMesaj('ben', lambaBekleyen.istek);
   }
@@ -839,7 +839,7 @@
     kaydirBas = null;
     if (dx > 70 && dy < dx / 2) lambaKapat();
   }, { passive: true });
-  $('#lamba-not').addEventListener('click', () => lambaSor('Not al'));
+  $('#lamba-not').addEventListener('click', () => lambaSor('Ne durumdayız?'));
   $('#lamba-sor').addEventListener('submit', (e) => {
     e.preventDefault();
     const soru = $('#ls-soru').value.trim();

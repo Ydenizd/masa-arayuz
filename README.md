@@ -62,7 +62,7 @@ Diğer düğmeler:
 ## Lamba (dijital danışman, masa ADR-0026)
 
 Sağ alttaki lamba, proje yöneticisi asistanıdır. Dokununca sağdan kayan pencere ekranın yarısını kaplar; **»** ya da sağa kaydırma kapatır.
-- **NOT AL:** o anki projenin masa verisinden kısa notlar: bugün planlama mı uygulama mı, odak, plan eksikleri, dikkat. Her not dayanağını gösterir.
+- **Ne durumdayız?:** projenin asıl eksiği, iki ya da üç seçenek (artısı, eksisi) ve dikkat edilecek risk; en çok 6 satır, kodsuz.
 - **Sor:** aynı veri üzerine soru; cevap kısa, gerektiğinde ayrıntılı.
 
 Lamba sahibin Claude Pro aboneliğiyle, masa deposundaki `lamba` iş akışında çalışır; cevap 1–2 dakika sürer. Arayüzde Claude anahtarı yoktur. Kurulum masa deposunun README'sinde (`CLAUDE_CODE_OAUTH_TOKEN`).
