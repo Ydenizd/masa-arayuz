@@ -774,7 +774,7 @@
       const kayitlar = await lambaKaydi(m.proje.kimlik);
       if (p() !== m) return;
       kayitlar.slice(-6).forEach(lambaKayitGoster);
-      if (!kayitlar.length) lambaMesaj('lamba', '"Ne durumdayız?"a bas; projenin eksiğini ve bugün için seçenekleri kısaca yazayım. Ya da bir şey sor. Cevabım 1–2 dakika sürer. "Ne kaçırıyoruz?" yazarsan projede hiç konuşulmamış konuları ararım (2–10 dakika).');
+      if (!kayitlar.length) lambaMesaj('lamba', '"Ne durumdayız?"a bas; projenin eksiğini ve bugün için seçenekleri kısaca yazayım. Ya da bir şey sor. Cevabım 1–2 dakika sürer. "Ne kaçırıyoruz?" düğmesi projede hiç konuşulmamış konuları arar (2–10 dakika); bulduklarıma "B3 kabul", "B3 kapsam dışı" ya da "B3 sonra" yazarak karar verirsin.');
     } catch (e) { lambaMesaj('hata', e.message); }
     if (lambaBekleyen && lambaBekleyen.kimlik === m.proje.kimlik) lambaMesaj('ben', lambaBekleyen.istek);
   }
@@ -844,6 +844,7 @@
     if (dx > 70 && dy < dx / 2) lambaKapat();
   }, { passive: true });
   $('#lamba-not').addEventListener('click', () => lambaSor('Ne durumdayız?'));
+  $('#lamba-kacir').addEventListener('click', () => lambaSor(KACIRMA));
   $('#lamba-sor').addEventListener('submit', (e) => {
     e.preventDefault();
     const soru = $('#ls-soru').value.trim();
