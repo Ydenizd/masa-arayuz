@@ -743,6 +743,8 @@
   // "Ne durumdayız?" ya da soru, masa deposundaki lamba iş akışını başlatır (Claude Code, sahibin Claude Pro aboneliği).
   // Yanıt `lamba` dalındaki lamba/<proje>.json'a yazılır; arayüz onu bekleyip okur. Yanıt düz metindir (G2).
   const LAMBA_BEKLE = { aralik: 6000, sure: 5 * 60000 };
+  const KACIRMA = 'Ne kaçırıyoruz?'; // boşluk taraması (masa ADR-0027): web aramasıyla 2–10 dakika sürer
+  const KACIRMA_BEKLE = 16 * 60000;
   let lambaBekleyen = null; // { no, kimlik }
 
   async function lambaKaydi(kimlik) {
@@ -772,7 +774,7 @@
       const kayitlar = await lambaKaydi(m.proje.kimlik);
       if (p() !== m) return;
       kayitlar.slice(-6).forEach(lambaKayitGoster);
-      if (!kayitlar.length) lambaMesaj('lamba', '"Ne durumdayız?"a bas; projenin eksiğini ve bugün için seçenekleri kısaca yazayım. Ya da bir şey sor. Cevabım 1–2 dakika sürer.');
+      if (!kayitlar.length) lambaMesaj('lamba', '"Ne durumdayız?"a bas; projenin eksiğini ve bugün için seçenekleri kısaca yazayım. Ya da bir şey sor. Cevabım 1–2 dakika sürer. "Ne kaçırıyoruz?" düğmesi projede hiç konuşulmamış konuları arar (2–10 dakika); bulduklarıma "B3 kabul", "B3 kapsam dışı" ya da "B3 sonra" yazarak karar verirsin.');
     } catch (e) { lambaMesaj('hata', e.message); }
     if (lambaBekleyen && lambaBekleyen.kimlik === m.proje.kimlik) lambaMesaj('ben', lambaBekleyen.istek);
   }
@@ -799,18 +801,20 @@
     lambaBekleyen = { no, kimlik: m.proje.kimlik, istek };
     lambaMesaj('ben', istek);
     const durum = $('#lamba-durum');
-    durum.textContent = 'Lamba düşünüyor… (1–2 dakika)';
+    const tarama = istek.trim() === KACIRMA;
+    durum.textContent = tarama ? 'Lamba projeyi tarıyor… (2–10 dakika)' : 'Lamba düşünüyor… (1–2 dakika)';
     $('#lamba').classList.add('dusunuyor');
     try {
       await gh(`${depo()}/actions/workflows/lamba.yml/dispatches`,
         { yontem: 'POST', govde: { ref: 'main', inputs: { proje: m.proje.kimlik, istek, no } } });
       const bas = Date.now();
       let bulunan = null;
-      while (!bulunan && Date.now() - bas < LAMBA_BEKLE.sure) {
+      const sure = tarama ? KACIRMA_BEKLE : LAMBA_BEKLE.sure;
+      while (!bulunan && Date.now() - bas < sure) {
         await new Promise((r) => setTimeout(r, LAMBA_BEKLE.aralik));
         bulunan = (await lambaKaydi(m.proje.kimlik)).find((k) => k.no === no) || null;
       }
-      if (!bulunan) throw new Error('Lamba 5 dakikada cevap vermedi. Masa deposunda lamba iş akışına bakın.');
+      if (!bulunan) throw new Error(`Lamba ${Math.round(sure / 60000)} dakikada cevap vermedi. Masa deposunda lamba iş akışına bakın.`);
       if (lambaAcik() && p() === m) lambaMesaj(bulunan.durum === 'tamam' ? 'lamba' : 'hata', bulunan.yanit || '');
     } catch (e) { if (lambaAcik()) lambaMesaj('hata', e.message); }
     lambaBekleyen = null;
@@ -840,6 +844,7 @@
     if (dx > 70 && dy < dx / 2) lambaKapat();
   }, { passive: true });
   $('#lamba-not').addEventListener('click', () => lambaSor('Ne durumdayız?'));
+  $('#lamba-kacir').addEventListener('click', () => lambaSor(KACIRMA));
   $('#lamba-sor').addEventListener('submit', (e) => {
     e.preventDefault();
     const soru = $('#ls-soru').value.trim();

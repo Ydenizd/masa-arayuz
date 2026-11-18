@@ -248,6 +248,10 @@ button.dugum:hover { border-color: rgba(156, 195, 240, .7); background: #0f2c52;
 .lamba-mesaj.hata { color: var(--engelli); border: 1px solid var(--engelli); }
 #lamba-durum { font-size: 12px; min-height: 1em; }
 .lamba-alt-satir { display: grid; gap: 8px; }
+.lamba-dugmeler { display: flex; gap: 8px; }
+.lamba-dugmeler #lamba-not { flex: 1; }
+#lamba-kacir { flex: 0 1 auto; }
+@media (max-width: 520px) { .lamba-dugmeler { flex-direction: column; } }
 #lamba-sor { display: flex; gap: 8px; }
 #lamba-sor input { flex: 1; min-width: 0; background: var(--zemin); color: var(--yazi); border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px; font-size: 16px; }
 #lamba-sor input:focus { outline: 2px solid var(--vurgu); outline-offset: 1px; }
