@@ -106,13 +106,13 @@
 
   <!-- Lamba: dijital danışman (ADR-0026). Karakter app.js'de SVG olarak çizilir. -->
   <button id="lamba" type="button" aria-label="Lamba: danışman notları" aria-expanded="false" aria-controls="lamba-pencere"></button>
-  <section id="lamba-pencere" aria-label="Lamba" hidden>
+  <section id="lamba-pencere" aria-label="Lamba" aria-hidden="true">
     <header class="lamba-ust">
+      <button class="btn" id="lamba-gizle" type="button" aria-label="Lambayı sağa kaydırıp kapat" title="Kapat">»</button>
       <div>
         <div class="kicker">LAMBA</div>
         <div id="lamba-alt" class="soluk"></div>
       </div>
-      <button class="btn" id="lamba-kapat" type="button" aria-label="Kapat">×</button>
     </header>
     <div id="lamba-icerik" aria-live="polite"></div>
     <div id="lamba-durum" class="soluk" role="status"></div>

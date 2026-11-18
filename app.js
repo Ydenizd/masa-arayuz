@@ -243,7 +243,7 @@
     etkin = Math.min(etkin, Math.max(0, projeler.length - 1));
     ciz();
     lambaSohbet.kimlik = null; // yeni veriyle lamba sohbeti baştan başlar
-    if (!$('#lamba-pencere').hidden) lambaHazirla();
+    if (lambaAcik()) lambaHazirla();
   }
 
   const sinir = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -608,7 +608,7 @@
   });
   addEventListener('keydown', (e) => {
     if ($('#masa').hidden || e.target.closest('input')) return;
-    if (e.key === 'Escape' && !$('#lamba-pencere').hidden) return void lambaKapat();
+    if (e.key === 'Escape' && lambaAcik()) return void lambaKapat();
     if (e.key === 'Escape') kapat();
   });
   let yenidenBoyut = 0;
@@ -633,7 +633,7 @@
       nav.appendChild(b);
     });
   }
-  function sekmeSec(i) { if (i !== etkin) { etkin = i; tuval.scrollTo(0, 0); ciz(); if (!$('#lamba-pencere').hidden) lambaHazirla(); } }
+  function sekmeSec(i) { if (i !== etkin) { etkin = i; tuval.scrollTo(0, 0); ciz(); if (lambaAcik()) lambaHazirla(); } }
 
   function hudCiz() {
     const m = p();
@@ -854,8 +854,21 @@
         : 'Merhaba. Not verebilmem için bir kez Claude API anahtarını girmen gerekiyor.');
     }
   }
-  function lambaAc() { $('#lamba-pencere').hidden = false; $('#lamba').setAttribute('aria-expanded', 'true'); lambaHazirla(); }
-  function lambaKapat() { $('#lamba-pencere').hidden = true; $('#lamba').setAttribute('aria-expanded', 'false'); }
+  // Pencere sağdan kayarak açılır, ekranın yarısını üst katman olarak kaplar; masayı itmez.
+  const lambaAcik = () => $('#lamba-pencere').classList.contains('acik');
+  function lambaAc() {
+    const w = $('#lamba-pencere');
+    w.classList.add('acik'); w.setAttribute('aria-hidden', 'false');
+    $('#lamba').setAttribute('aria-expanded', 'true');
+    lambaHazirla();
+    $('#lamba-gizle').focus();
+  }
+  function lambaKapat() {
+    const w = $('#lamba-pencere');
+    if (!w.classList.contains('acik')) return;
+    w.classList.remove('acik'); w.setAttribute('aria-hidden', 'true');
+    $('#lamba').setAttribute('aria-expanded', 'false');
+  }
 
   async function lambaSor(istek, gosterilen) {
     const m = p();
@@ -907,8 +920,17 @@
     s('path', { class: 'lamba-isik', d: 'M26 46 L12 70 L44 70 L40 40 Z' }),
     s('line', { class: 'lamba-kol', x1: 40, y1: 44, x2: 30, y2: 74 }),
     s('rect', { class: 'lamba-ayak', x: 16, y: 74, width: 34, height: 8, rx: 4 }))]);
-  $('#lamba').addEventListener('click', () => ($('#lamba-pencere').hidden ? lambaAc() : lambaKapat()));
-  $('#lamba-kapat').addEventListener('click', lambaKapat);
+  $('#lamba').addEventListener('click', () => (lambaAcik() ? lambaKapat() : lambaAc()));
+  $('#lamba-gizle').addEventListener('click', lambaKapat);
+  // Sağa kaydırınca kapanır (dokunmatik).
+  let kaydirBas = null;
+  $('#lamba-pencere').addEventListener('touchstart', (e) => { const t = e.touches[0]; kaydirBas = { x: t.clientX, y: t.clientY }; }, { passive: true });
+  $('#lamba-pencere').addEventListener('touchend', (e) => {
+    if (!kaydirBas) return;
+    const t = e.changedTouches[0], dx = t.clientX - kaydirBas.x, dy = Math.abs(t.clientY - kaydirBas.y);
+    kaydirBas = null;
+    if (dx > 70 && dy < dx / 2) lambaKapat();
+  }, { passive: true });
   $('#lamba-not').addEventListener('click', () => lambaSor('Not al: bugün için notlarını ver.', 'Not al'));
   $('#lamba-sor').addEventListener('submit', (e) => {
     e.preventDefault();
