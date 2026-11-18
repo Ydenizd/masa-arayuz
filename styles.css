@@ -244,12 +244,11 @@ button.dugum:hover { border-color: rgba(156, 195, 240, .7); background: #0f2c52;
 .lamba-mesaj { font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 10px; padding: 8px 10px; }
 .lamba-mesaj.lamba { background: var(--kart); border: 1px solid var(--cizgi); }
 .lamba-mesaj.ben { align-self: flex-end; color: var(--vurgu); background: var(--vurgu-acik); max-width: 85%; }
+.lamba-zaman { display: block; font-size: 11px; color: var(--soluk); margin-top: 4px; }
 .lamba-mesaj.hata { color: var(--engelli); border: 1px solid var(--engelli); }
 #lamba-durum { font-size: 12px; min-height: 1em; }
 .lamba-alt-satir { display: grid; gap: 8px; }
 #lamba-sor { display: flex; gap: 8px; }
-#lamba-sor input, #lamba-kurulum input { flex: 1; min-width: 0; background: var(--zemin); color: var(--yazi); border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px; font-size: 16px; }
-#lamba-kurulum { display: grid; gap: 10px; }
-#lamba-kurulum label { display: grid; gap: 6px; font-size: 13px; }
-#lamba-sor input:focus, #lamba-kurulum input:focus { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+#lamba-sor input { flex: 1; min-width: 0; background: var(--zemin); color: var(--yazi); border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px; font-size: 16px; }
+#lamba-sor input:focus { outline: 2px solid var(--vurgu); outline-offset: 1px; }
 @media (prefers-reduced-motion: reduce) { .lamba-bas, .lamba-isik, #lamba-pencere, #lamba-pencere.acik { transition: none; } #lamba.dusunuyor .lamba-bas { animation: none; } }
