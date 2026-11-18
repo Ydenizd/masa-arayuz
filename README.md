@@ -20,12 +20,13 @@ Masanın (proje panosu) arayüzü: proje sekmeleri, soldan sağa yatay ağaç (p
 | --- | --- | --- |
 | G1 | Depoda yalnız arayüz dosyaları; veri dosyası ve anahtar biçiminde metin yok | `kontrol/guvenlik.py` (CI) |
 | G2 | Projelerden gelen metin düz metindir | `app.js` (`h`, `s` yardımcıları; izinli öznitelik listesi) + CI |
-| G3 | CSP: `default-src 'none'`, betik yalnız `'self'`, bağlantı yalnız `https://api.github.com` | `index.html` + CI |
+| G3 | CSP: `default-src 'none'`, betik yalnız `'self'`, bağlantı yalnız `https://api.github.com` ve lamba için `https://api.anthropic.com` | `index.html` + CI |
 | G4 | Dış kaynak yok | CI |
 | G5 | Anahtar PBKDF2-SHA256 (600.000 tur) ile türetilen anahtarla AES-GCM şifreli; PIN saklanmaz; yanlış PIN'de artan bekleme | `app.js` (kasa) |
 | G6 | Anahtar yalnız masa deposuna erişir; kod yalnız o depoya istek atar | Anahtar ayarı + `app.js` |
 | G7 | `main` korumalı, yalnız sahip birleştirir | Depo ayarı (sahip) |
 | G8 | `noindex` | `index.html` |
+| G9 | Lamba: Claude API anahtarı aynı PIN'le şifreli, yalnız bu cihazda; yalnız `api.anthropic.com`'a gider; istek yalnız düğmeyle ya da soruyla; yanıt düz metin | `app.js` (lamba) + CI |
 
 ## Kurulum (sahip)
 
@@ -57,6 +58,16 @@ Diğer düğmeler:
 - **GÜNCELLE:** masa deposunda toplama iş akışını başlatır, bitince veriyi yeniden okur.
 - **DENETİM:** playbook hazır olunca etkinleşir.
 - **KİLİTLE:** anahtarı bellekten siler. Masa yeniden açılırken PIN sorulur.
+
+## Lamba (dijital danışman, masa ADR-0026)
+
+Sağ alttaki lamba, proje yöneticisi asistanıdır. Dokununca pencere açılır:
+- **NOT AL:** o anki projenin masa verisine bakar, kısa notlar verir: bugün planlama mı uygulama mı, odak, plan eksikleri, dikkat. Her not dayanağını gösterir.
+- **Sor:** aynı veri üzerine soru sorulur; cevap kısa, gerektiğinde ayrıntılı.
+
+İlk kullanımda Claude API anahtarı ve masa PIN'i istenir; anahtar bu cihazda PIN ile şifrelenir. Anthropic Console'da anahtar yalnız bu iş için açılmalı ve aylık harcama sınırı konmalıdır.
+
+Maliyet: istek yalnız düğmeyle gider; veri sıkıştırılmış düz metindir (Seral için ~15 bin karakter); veri bloğu önbelleğe alınır, aynı sohbetteki sorular onu yeniden ödemez; yanıt üst sınırı kısadır; sohbet geçmişi son 6 mesajdır. Model `app.js`'teki `LAMBA_MODEL`.
 
 ## Yerelde deneme
 
