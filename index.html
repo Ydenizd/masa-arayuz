@@ -2,8 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<!-- G3: yalnız kendi dosyaları; bağlantı yalnız GitHub API'ye ve lamba için Claude API'ye (G9). Satır içi betik ve stil yok. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src https://api.github.com https://api.anthropic.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<!-- G3: yalnız kendi dosyaları; bağlantı yalnız GitHub API'ye. Satır içi betik ve stil yok. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <!-- G8 -->
 <meta name="robots" content="noindex, nofollow">
@@ -116,24 +116,13 @@
     </header>
     <div id="lamba-icerik" aria-live="polite"></div>
     <div id="lamba-durum" class="soluk" role="status"></div>
-    <form id="lamba-kurulum" autocomplete="off" hidden>
-      <label>Claude API anahtarı <span class="soluk">(bu cihazda PIN ile şifrelenir)</span>
-        <input id="la-anahtar" type="password" required spellcheck="false" autocapitalize="off">
-      </label>
-      <label>Masa PIN'i
-        <input id="la-pin" type="password" inputmode="numeric" required>
-      </label>
-      <button class="btn birincil" type="submit">Kaydet</button>
-      <p id="lamba-hata" class="hata" role="alert"></p>
-    </form>
     <div class="lamba-alt-satir">
-      <button class="btn birincil" id="lamba-not" type="button" hidden>Not al</button>
-      <form id="lamba-sor" autocomplete="off" hidden>
+      <button class="btn birincil" id="lamba-not" type="button">Not al</button>
+      <form id="lamba-sor" autocomplete="off">
         <input id="ls-soru" type="text" placeholder="Lambaya sor" aria-label="Lambaya sor" maxlength="2000">
         <button class="btn" type="submit">Sor</button>
       </form>
     </div>
-    <button class="btn baglanti" id="lamba-sil" type="button" hidden>Claude anahtarını bu cihazdan sil</button>
   </section>
 </main>
 </body>

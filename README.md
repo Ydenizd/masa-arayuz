@@ -20,13 +20,13 @@ Masanın (proje panosu) arayüzü: proje sekmeleri, soldan sağa yatay ağaç (p
 | --- | --- | --- |
 | G1 | Depoda yalnız arayüz dosyaları; veri dosyası ve anahtar biçiminde metin yok | `kontrol/guvenlik.py` (CI) |
 | G2 | Projelerden gelen metin düz metindir | `app.js` (`h`, `s` yardımcıları; izinli öznitelik listesi) + CI |
-| G3 | CSP: `default-src 'none'`, betik yalnız `'self'`, bağlantı yalnız `https://api.github.com` ve lamba için `https://api.anthropic.com` | `index.html` + CI |
+| G3 | CSP: `default-src 'none'`, betik yalnız `'self'`, bağlantı yalnız `https://api.github.com` | `index.html` + CI |
 | G4 | Dış kaynak yok | CI |
 | G5 | Anahtar PBKDF2-SHA256 (600.000 tur) ile türetilen anahtarla AES-GCM şifreli; PIN saklanmaz; yanlış PIN'de artan bekleme | `app.js` (kasa) |
 | G6 | Anahtar yalnız masa deposuna erişir; kod yalnız o depoya istek atar | Anahtar ayarı + `app.js` |
 | G7 | `main` korumalı, yalnız sahip birleştirir | Depo ayarı (sahip) |
 | G8 | `noindex` | `index.html` |
-| G9 | Lamba: Claude API anahtarı aynı PIN'le şifreli, yalnız bu cihazda; yalnız `api.anthropic.com`'a gider; istek yalnız düğmeyle ya da soruyla; yanıt düz metin | `app.js` (lamba) + CI |
+| G9 | Lamba: arayüzde Claude anahtarı yok; düğme masa deposundaki lamba iş akışını başlatır (Claude Pro, Actions'ta); yanıt `lamba` dalından okunur, düz metin basılır | `app.js` (lamba) |
 
 ## Kurulum (sahip)
 
@@ -61,17 +61,8 @@ Diğer düğmeler:
 
 ## Lamba (dijital danışman, masa ADR-0026)
 
-Sağ alttaki lamba, proje yöneticisi asistanıdır. Dokununca pencere açılır:
-- **NOT AL:** o anki projenin masa verisine bakar, kısa notlar verir: bugün planlama mı uygulama mı, odak, plan eksikleri, dikkat. Her not dayanağını gösterir.
-- **Sor:** aynı veri üzerine soru sorulur; cevap kısa, gerektiğinde ayrıntılı.
+Sağ alttaki lamba, proje yöneticisi asistanıdır. Dokununca sağdan kayan pencere ekranın yarısını kaplar; **»** ya da sağa kaydırma kapatır.
+- **NOT AL:** o anki projenin masa verisinden kısa notlar: bugün planlama mı uygulama mı, odak, plan eksikleri, dikkat. Her not dayanağını gösterir.
+- **Sor:** aynı veri üzerine soru; cevap kısa, gerektiğinde ayrıntılı.
 
-İlk kullanımda Claude API anahtarı ve masa PIN'i istenir; anahtar bu cihazda PIN ile şifrelenir. Anthropic Console'da anahtar yalnız bu iş için açılmalı ve aylık harcama sınırı konmalıdır.
-
-Maliyet: istek yalnız düğmeyle gider; veri sıkıştırılmış düz metindir (Seral için ~15 bin karakter); veri bloğu önbelleğe alınır, aynı sohbetteki sorular onu yeniden ödemez; yanıt üst sınırı kısadır; sohbet geçmişi son 6 mesajdır. Model `app.js`'teki `LAMBA_MODEL`.
-
-## Yerelde deneme
-
-```bash
-python3 -m http.server 8765   # http://localhost:8765 güvenli bağlam sayılır
-python3 kontrol/guvenlik.py
-```
+Lamba sahibin Claude Pro aboneliğiyle, masa deposundaki `lamba` iş akışında çalışır; cevap 1–2 dakika sürer. Arayüzde Claude anahtarı yoktur. Kurulum masa deposunun README'sinde (`CLAUDE_CODE_OAUTH_TOKEN`).
